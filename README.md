@@ -57,4 +57,7 @@ Phần mềm được thiết kế dành riêng cho **Giáo viên dạy Tiếng 
 ---
 
 ## 💾 Lưu Trữ Dữ Liệu
-Dữ liệu tự động lưu trên trình duyệt của máy tính (`localStorage`), không cần cài đặt cơ sở dữ liệu phức tạp. Để an toàn, định kỳ thầy có thể bấm biểu tượng **Sao lưu (Download)** ở góc trên bên phải để tải file dự phòng về máy.
+- **Local**: Tự động lưu trên trình duyệt (`localStorage`).
+- **Đám mây (Supabase)**: Bấm **☁️ Đám Mây** để cấu hình URL + Anon Key; mọi thay đổi tự động đồng bộ lên bảng `zhongwen_app_data` (chạy [`setup_database.sql`](setup_database.sql) trên Supabase trước).
+- **Streamlit Cloud**: Thêm `SUPABASE_URL` và `SUPABASE_PUBLISHABLE_KEY` (hoặc `SUPABASE_KEY` anon cũ) trong App settings → Secrets — xem [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example). Không dùng **secret key** trên trình duyệt.
+- **Sao lưu file**: Biểu tượng **Download** ở góc trên để xuất `.json` dự phòng.

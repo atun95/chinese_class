@@ -3,6 +3,13 @@
 // ============================================================================
 
 const STORAGE_KEY = "zhongwen_class_manager_data_v1";
+const CLOUD_CONFIG_KEY = "zhongwen_supabase_config_v1";
+const CLOUD_LOCAL_META_KEY = "zhongwen_cloud_local_meta_v1";
+const CLOUD_ROW_ID = "main";
+
+let supabaseClient = null;
+let cloudPushTimer = null;
+let cloudSyncPaused = false;
 
 // Khởi tạo trạng thái ứng dụng
 let appState = {
@@ -17,8 +24,6 @@ let appState = {
 // KHỞI ĐỘNG & NẠP DỮ LIỆU TỪ LOCALSTORAGE
 // ============================================================================
 function initApp() {
-  loadDataFromStorage();
-
   // Đặt giá trị mặc định cho ô chọn tháng tính phí là tháng hiện tại (YYYY-MM)
   const currentMonthStr = getCurrentMonthString();
   const monthInput = document.getElementById("select-tuition-month");
@@ -113,6 +118,310 @@ function loadDataFromStorage() {
 
 function saveDataToStorage() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+  localStorage.setItem(
+    CLOUD_LOCAL_META_KEY,
+    JSON.stringify({ updatedAt: new Date().toISOString() })
+  );
+  pushToCloudDebounced();
+}
+
+function applyParsedAppState(parsed) {
+  appState.teacherSettings = parsed.teacherSettings || DEFAULT_TEACHER_SETTINGS;
+  appState.classes = parsed.classes || DEFAULT_CLASSES;
+  appState.students = parsed.students || DEFAULT_STUDENTS;
+  appState.sessions = parsed.sessions || DEFAULT_SESSIONS;
+  appState.payments = parsed.payments || DEFAULT_PAYMENTS;
+  appState.schedules = parsed.schedules || (typeof DEFAULT_SCHEDULES !== "undefined" ? [...DEFAULT_SCHEDULES] : []);
+  appState.cancelledClassDates = parsed.cancelledClassDates || [];
+  if (parsed.isAttendanceResetV2 !== undefined) {
+    appState.isAttendanceResetV2 = parsed.isAttendanceResetV2;
+  }
+  syncSchedulesToSessions();
+}
+
+function getCloudTableName() {
+  const cfg = window.ZHONGWEN_CONFIG || {};
+  return cfg.tableName || "zhongwen_app_data";
+}
+
+function getEffectiveSupabaseConfig() {
+  let url = "";
+  let key = "";
+  try {
+    const saved = localStorage.getItem(CLOUD_CONFIG_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      url = parsed.supabaseUrl || "";
+      key = parsed.supabaseAnonKey || "";
+    }
+  } catch (e) {
+    console.warn("Không đọc được cấu hình cloud đã lưu:", e);
+  }
+  const embedded = window.ZHONGWEN_CONFIG || {};
+  if (!url) url = embedded.supabaseUrl || "";
+  if (!key) key = embedded.supabaseAnonKey || "";
+  return { supabaseUrl: url.trim(), supabaseAnonKey: key.trim() };
+}
+
+function initSupabaseClient() {
+  supabaseClient = null;
+  if (typeof supabase === "undefined" || !supabase.createClient) {
+    return false;
+  }
+  const { supabaseUrl, supabaseAnonKey } = getEffectiveSupabaseConfig();
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return false;
+  }
+  try {
+    supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    return true;
+  } catch (e) {
+    console.error("Không khởi tạo được Supabase client:", e);
+    supabaseClient = null;
+    return false;
+  }
+}
+
+function getLocalMetaUpdatedAt() {
+  try {
+    const raw = localStorage.getItem(CLOUD_LOCAL_META_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed.updatedAt || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function cloudHasUsableData(data) {
+  if (!data || typeof data !== "object") return false;
+  if (Array.isArray(data.classes) && data.classes.length > 0) return true;
+  if (Array.isArray(data.students) && data.students.length > 0) return true;
+  return false;
+}
+
+async function fetchCloudRow() {
+  if (!supabaseClient) return null;
+  const tableName = getCloudTableName();
+  const { data, error } = await supabaseClient
+    .from(tableName)
+    .select("id, data, updated_at")
+    .eq("id", CLOUD_ROW_ID)
+    .maybeSingle();
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+async function pushToCloud(options) {
+  const silent = options && options.silent;
+  if (!supabaseClient || cloudSyncPaused) {
+    if (!silent) showToast("Chưa kết nối Supabase — bấm ☁️ để cấu hình.");
+    return { ok: false };
+  }
+  const tableName = getCloudTableName();
+  const payload = {
+    id: CLOUD_ROW_ID,
+    data: appState,
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await supabaseClient.from(tableName).upsert(payload);
+  if (error) {
+    console.error("Lỗi đẩy dữ liệu lên cloud:", error);
+    updateCloudStatusUI(error.message);
+    if (!silent) showToast("Lỗi lưu đám mây: " + (error.message || "Không xác định"));
+    return { ok: false, error };
+  }
+  localStorage.setItem(
+    CLOUD_LOCAL_META_KEY,
+    JSON.stringify({ updatedAt: payload.updated_at })
+  );
+  updateCloudStatusUI(null, payload.updated_at);
+  if (!silent) showToast("Đã lưu dữ liệu lên đám mây!");
+  return { ok: true };
+}
+
+function pushToCloudDebounced() {
+  if (!supabaseClient || cloudSyncPaused) return;
+  if (cloudPushTimer) clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(() => {
+    pushToCloud({ silent: true }).catch(err => {
+      console.error("Lỗi đồng bộ tự động lên cloud:", err);
+      updateCloudStatusUI(err.message);
+    });
+  }, 1500);
+}
+
+async function pullFromCloud(options) {
+  const silent = options && options.silent;
+  if (!supabaseClient) {
+    if (!silent) showToast("Chưa kết nối Supabase.");
+    return { ok: false };
+  }
+  cloudSyncPaused = true;
+  try {
+    const row = await fetchCloudRow();
+    if (!row || !cloudHasUsableData(row.data)) {
+      if (!silent) showToast("Chưa có dữ liệu trên đám mây.");
+      return { ok: false, empty: true };
+    }
+    applyParsedAppState(row.data);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    if (row.updated_at) {
+      localStorage.setItem(
+        CLOUD_LOCAL_META_KEY,
+        JSON.stringify({ updatedAt: row.updated_at })
+      );
+    }
+    updateCloudStatusUI(null, row.updated_at);
+    if (!silent) showToast("Đã tải dữ liệu từ đám mây!");
+    return { ok: true, row };
+  } catch (err) {
+    console.error("Lỗi tải dữ liệu từ cloud:", err);
+    updateCloudStatusUI(err.message);
+    if (!silent) showToast("Lỗi tải đám mây: " + (err.message || "Không xác định"));
+    return { ok: false, error: err };
+  } finally {
+    cloudSyncPaused = false;
+  }
+}
+
+async function pullFromCloudOnStartup(hadLocalBeforeLoad) {
+  if (!supabaseClient) return false;
+  try {
+    const row = await fetchCloudRow();
+    if (!row || !cloudHasUsableData(row.data)) {
+      await pushToCloud({ silent: true });
+      return false;
+    }
+    const cloudTime = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+    const localTimeStr = getLocalMetaUpdatedAt();
+    const localTime = localTimeStr ? new Date(localTimeStr).getTime() : 0;
+    const useCloud = !hadLocalBeforeLoad || cloudTime > localTime;
+    if (!useCloud) return false;
+    cloudSyncPaused = true;
+    applyParsedAppState(row.data);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    if (row.updated_at) {
+      localStorage.setItem(
+        CLOUD_LOCAL_META_KEY,
+        JSON.stringify({ updatedAt: row.updated_at })
+      );
+    }
+    return true;
+  } catch (err) {
+    console.error("Không đồng bộ được dữ liệu lúc khởi động:", err);
+    updateCloudStatusUI(err.message);
+    return false;
+  } finally {
+    cloudSyncPaused = false;
+  }
+}
+
+function updateCloudStatusUI(errorMessage, updatedAt) {
+  const dot = document.getElementById("cloud-indicator-dot");
+  const statusText = document.getElementById("cloud-status-text");
+  const detail = document.getElementById("cloud-status-detail");
+  const connected = !!supabaseClient && !errorMessage;
+
+  if (dot) {
+    dot.classList.toggle("connected", connected);
+    dot.classList.toggle("error", !!errorMessage);
+  }
+  if (statusText) {
+    statusText.textContent = errorMessage ? "Lỗi Cloud" : connected ? "Đã kết nối" : "Đám Mây";
+  }
+  if (detail) {
+    if (errorMessage) {
+      detail.innerHTML = `Trạng thái: <strong style="color: var(--danger, #c0392b);">Lỗi — ${escapeHtml(errorMessage)}</strong>`;
+    } else if (connected) {
+      const timeLabel = updatedAt
+        ? formatDateDisplay(String(updatedAt).split("T")[0]) + " " + (String(updatedAt).split("T")[1] || "").substring(0, 8)
+        : "vừa xong";
+      detail.innerHTML = `Trạng thái: <strong style="color: var(--success, #27ae60);">Đã kết nối Supabase</strong><br>Cập nhật gần nhất: ${escapeHtml(timeLabel)}`;
+    } else {
+      detail.innerHTML = "Trạng thái: <strong>Chưa kết nối</strong>";
+    }
+  }
+}
+
+function openCloudSyncModal() {
+  const cfg = getEffectiveSupabaseConfig();
+  const urlInput = document.getElementById("cloud-supabase-url");
+  const keyInput = document.getElementById("cloud-supabase-key");
+  if (urlInput) urlInput.value = cfg.supabaseUrl || "";
+  if (keyInput) keyInput.value = cfg.supabaseAnonKey || "";
+  updateCloudStatusUI();
+  openModal("modal-cloud-sync");
+}
+
+async function saveCloudConfigAndConnect() {
+  const urlInput = document.getElementById("cloud-supabase-url");
+  const keyInput = document.getElementById("cloud-supabase-key");
+  const url = urlInput ? urlInput.value.trim() : "";
+  const key = keyInput ? keyInput.value.trim() : "";
+  if (!url || !key) {
+    showToast("Vui lòng nhập đủ Project URL và Anon Key.");
+    return;
+  }
+  localStorage.setItem(
+    CLOUD_CONFIG_KEY,
+    JSON.stringify({ supabaseUrl: url, supabaseAnonKey: key })
+  );
+  if (!initSupabaseClient()) {
+    updateCloudStatusUI("Không khởi tạo được Supabase client");
+    showToast("Không kết nối được — kiểm tra URL/Key.");
+    return;
+  }
+  try {
+    await fetchCloudRow();
+    updateCloudStatusUI(null);
+    showToast("Kết nối Supabase thành công!");
+  } catch (err) {
+    updateCloudStatusUI(err.message);
+    showToast("Lỗi kiểm tra kết nối: " + (err.message || ""));
+  }
+}
+
+function manualPushToCloud() {
+  pushToCloud({ silent: false }).catch(err => {
+    updateCloudStatusUI(err.message);
+  });
+}
+
+async function manualPullFromCloud() {
+  const result = await pullFromCloud({ silent: false });
+  if (result.ok) {
+    initApp();
+  }
+}
+
+function copySqlScript() {
+  const block = document.getElementById("sql-copy-block");
+  const text = block ? block.innerText : "";
+  if (!text) {
+    showToast("Không tìm thấy đoạn SQL.");
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast("Đã sao chép mã SQL!");
+    }).catch(() => {
+      showToast("Không sao chép được — hãy chọn và copy thủ công.");
+    });
+  } else {
+    showToast("Hãy chọn và copy đoạn SQL thủ công.");
+  }
+}
+
+async function bootstrapApp() {
+  const hadLocalBeforeLoad = !!localStorage.getItem(STORAGE_KEY);
+  loadDataFromStorage();
+  initSupabaseClient();
+  await pullFromCloudOnStartup(hadLocalBeforeLoad);
+  updateCloudStatusUI();
+  initApp();
 }
 
 // ============================================================================
@@ -2380,4 +2689,9 @@ window.addEventListener("click", (e) => {
 });
 
 // Khởi chạy ứng dụng khi DOM tải xong
-document.addEventListener("DOMContentLoaded", initApp);
+document.addEventListener("DOMContentLoaded", () => {
+  bootstrapApp().catch(err => {
+    console.error("Lỗi khởi động ứng dụng:", err);
+    initApp();
+  });
+});

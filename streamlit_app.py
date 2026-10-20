@@ -50,6 +50,28 @@ def read_file(filename):
             return f.read()
     return ""
 
+
+def get_supabase_from_secrets():
+    """Đọc URL và khóa client (anon hoặc publishable) từ Streamlit Secrets."""
+    url = ""
+    key = ""
+    try:
+        if "SUPABASE_URL" in st.secrets:
+            url = str(st.secrets["SUPABASE_URL"]).strip()
+        if "SUPABASE_PUBLISHABLE_KEY" in st.secrets:
+            key = str(st.secrets["SUPABASE_PUBLISHABLE_KEY"]).strip()
+        elif "SUPABASE_KEY" in st.secrets:
+            key = str(st.secrets["SUPABASE_KEY"]).strip()
+    except Exception:
+        pass
+    return url, key
+
+
+def supabase_secrets_configured():
+    url, key = get_supabase_from_secrets()
+    return bool(url and key)
+
+
 def build_full_html():
     index_html = read_file("index.html")
     style_css = read_file("style.css")
@@ -57,16 +79,7 @@ def build_full_html():
     mock_data_js = read_file("mock-data.js")
     app_js = read_file("app.js")
 
-    # Kiểm tra xem có cấu hình Supabase từ st.secrets (Streamlit Secrets) không
-    supabase_url = ""
-    supabase_key = ""
-    try:
-        if "SUPABASE_URL" in st.secrets:
-            supabase_url = st.secrets["SUPABASE_URL"]
-        if "SUPABASE_KEY" in st.secrets:
-            supabase_key = st.secrets["SUPABASE_KEY"]
-    except Exception:
-        pass
+    supabase_url, supabase_key = get_supabase_from_secrets()
 
     # Nếu có secrets từ Streamlit Cloud, tiêm trực tiếp vào config
     secrets_injection = ""
@@ -126,7 +139,14 @@ with st.sidebar:
     st.title("🎓 Quản Lý Lớp Học")
     st.markdown("---")
     st.markdown("### ☁️ Trạng Thái Backend")
-    st.info("Hệ thống tự động đồng bộ dữ liệu qua **Supabase Cloud Database**. Dữ liệu được lưu trữ vĩnh viễn và chia sẻ tức thì cho nhiều người xem.")
+    if supabase_secrets_configured():
+        st.success("Đã cấu hình **Supabase** qua Streamlit Secrets. Ứng dụng tự động lưu và tải dữ liệu đám mây.")
+    else:
+        st.warning(
+            "Chưa thấy `SUPABASE_URL` và `SUPABASE_PUBLISHABLE_KEY` (hoặc `SUPABASE_KEY`) trong Streamlit Secrets. "
+            "Thêm trong App settings → Secrets, hoặc cấu hình qua nút ☁️ trên thanh menu. "
+            "**Không** dùng `SUPABASE_SECRET_KEY` trong app trình duyệt."
+        )
     st.markdown("---")
     st.markdown("### 📌 Hướng dẫn nhanh:")
     st.markdown("1. Dữ liệu thay đổi trên máy tính sẽ tự động lưu lên đám mây.")
