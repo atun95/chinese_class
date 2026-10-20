@@ -944,38 +944,57 @@ function renderAttendanceHistory() {
   const classSelect = document.getElementById("select-attendance-class");
   if (!classSelect) return;
 
-  const selectedClassId = classSelect.value;
-  const cls = appState.classes.find(c => c.id === selectedClassId) || appState.classes[0];
-  if (!cls) return;
-
-  if (classSelect.value !== cls.id) {
-    classSelect.value = cls.id;
-  }
-
   // Tự động đồng bộ các buổi học từ Thời Khóa Biểu Tuần
   syncSchedulesToSessions();
 
-  const sessions = appState.sessions
-    .filter(s => s.classId === cls.id)
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  const selectedClassId = classSelect.value || "all";
+  const isAll = selectedClassId === "all";
 
-  const students = appState.students.filter(s => s.classId === cls.id);
+  let cls = null;
+  if (!isAll) {
+    cls = appState.classes.find(c => c.id === selectedClassId);
+    if (!cls && appState.classes.length > 0) {
+      cls = appState.classes[0];
+      classSelect.value = cls.id;
+    }
+  }
+
+  const sessions = isAll
+    ? [...appState.sessions].sort((a, b) => new Date(b.date) - new Date(a.date))
+    : (cls 
+        ? appState.sessions.filter(s => s.classId === cls.id).sort((a, b) => new Date(b.date) - new Date(a.date))
+        : []);
 
   // Thẻ tóm tắt số buổi của lớp
   const summaryBox = document.getElementById("class-attendance-summary");
   if (summaryBox) {
     const checkedCount = sessions.filter(s => s.attendance && Object.keys(s.attendance).length > 0).length;
-    summaryBox.innerHTML = `
-      <div>
-        <h4>Lớp: ${escapeHtml(cls.name)} (${escapeHtml(cls.level || "Tiếng Trung")})</h4>
-        <small style="color: var(--primary);">Lịch học: ${escapeHtml(cls.scheduleDays)} • ${escapeHtml(cls.scheduleTime)}</small>
-      </div>
-      <div class="attendance-summary-stats">
-        <span>Tổng buổi từ Thời Khóa Biểu: <strong>${sessions.length} buổi</strong></span>
-        <span>Đã điểm danh: <strong>${checkedCount} buổi</strong></span>
-        <span>Sĩ số: <strong>${students.length} bạn</strong></span>
-      </div>
-    `;
+    if (isAll) {
+      summaryBox.innerHTML = `
+        <div>
+          <h4>Tất cả các lớp (${appState.classes.length} lớp học)</h4>
+          <small style="color: var(--primary);">Toàn bộ danh sách buổi học & điểm danh</small>
+        </div>
+        <div class="attendance-summary-stats">
+          <span>Tổng số buổi: <strong>${sessions.length} buổi</strong></span>
+          <span>Đã điểm danh: <strong>${checkedCount} buổi</strong></span>
+          <span>Tổng học viên: <strong>${appState.students.length} bạn</strong></span>
+        </div>
+      `;
+    } else if (cls) {
+      const classStudents = appState.students.filter(s => s.classId === cls.id);
+      summaryBox.innerHTML = `
+        <div>
+          <h4>Lớp: ${escapeHtml(cls.name)} (${escapeHtml(cls.level || "Tiếng Trung")})</h4>
+          <small style="color: var(--primary);">Lịch học: ${escapeHtml(cls.scheduleDays)} • ${escapeHtml(cls.scheduleTime)}</small>
+        </div>
+        <div class="attendance-summary-stats">
+          <span>Tổng buổi từ Thời Khóa Biểu: <strong>${sessions.length} buổi</strong></span>
+          <span>Đã điểm danh: <strong>${checkedCount} buổi</strong></span>
+          <span>Sĩ số: <strong>${classStudents.length} bạn</strong></span>
+        </div>
+      `;
+    }
   }
 
   // Bảng chi tiết từng buổi
@@ -986,7 +1005,7 @@ function renderAttendanceHistory() {
     tbody.innerHTML = `
       <tr>
         <td colspan="5" style="text-align: center; padding: 28px; color: var(--text-muted);">
-          Lớp này chưa có buổi học nào. Buổi học được thêm từ tab <strong>Thời Khóa Biểu Tuần</strong> sẽ tự động đồng bộ sang đây để điểm danh.
+          ${isAll ? "Chưa có buổi học nào trong hệ thống." : "Lớp này chưa có buổi học nào. Buổi học được thêm từ tab <strong>Thời Khóa Biểu Tuần</strong> sẽ tự động đồng bộ sang đây để điểm danh."}
         </td>
       </tr>
     `;
@@ -994,16 +1013,25 @@ function renderAttendanceHistory() {
   }
 
   tbody.innerHTML = sessions.map((session, index) => {
-    const sessionNum = sessions.length - index;
+    const classForSession = appState.classes.find(c => c.id === session.classId);
+    const classStudents = appState.students.filter(s => s.classId === session.classId);
+
+    // Tính buổi số trong lớp tương ứng
+    const classSessionsAsc = appState.sessions
+      .filter(s => s.classId === session.classId)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sIndex = classSessionsAsc.findIndex(s => s.id === session.id);
+    const sessionNum = sIndex >= 0 ? (sIndex + 1) : (sessions.length - index);
+
     const hasAttendance = session.attendance && Object.keys(session.attendance).length > 0;
     const presentCount = hasAttendance 
       ? Object.values(session.attendance).filter(v => v === "present").length 
       : 0;
-    const totalCount = students.length;
+    const totalCount = classStudents.length;
 
     // Danh sách vắng
     const absentNames = hasAttendance 
-      ? students.filter(s => session.attendance[s.id] === "absent").map(s => s.name)
+      ? classStudents.filter(s => session.attendance[s.id] === "absent").map(s => s.name)
       : [];
 
     let badgeHtml = "";
@@ -1024,9 +1052,13 @@ function renderAttendanceHistory() {
       actionBtnHtml = `<span style="color: var(--primary); font-size: 13px; font-weight: 600;">Sửa check-in &rarr;</span>`;
     }
 
+    const sessionCol = isAll
+      ? `<div><strong style="color: var(--primary);">${escapeHtml(classForSession?.name || "Lớp")}</strong></div><small style="color: var(--text-muted); font-size: 11.5px;">Buổi ${sessionNum}</small>`
+      : `<strong style="color: var(--primary);">Buổi ${sessionNum}</strong>`;
+
     return `
       <tr style="cursor: pointer;" onclick="openEditAttendanceModal('${session.id}')" title="Bấm trực tiếp vào buổi học để điểm danh">
-        <td><strong style="color: var(--primary);">Buổi ${sessionNum}</strong></td>
+        <td>${sessionCol}</td>
         <td>
           <strong style="font-size: 13.5px;">${formatDateDisplay(session.date)}</strong>
         </td>
@@ -1045,7 +1077,7 @@ function openAttendanceModal() {
 
   const classSelect = document.getElementById("select-attendance-class");
   let chosenClassId = classSelect ? classSelect.value : "";
-  if (!chosenClassId && appState.classes.length > 0) {
+  if ((!chosenClassId || chosenClassId === "all") && appState.classes.length > 0) {
     chosenClassId = appState.classes[0].id;
   }
 
@@ -1166,7 +1198,10 @@ function handleSaveAttendance(e) {
   closeModal("modal-attendance");
 
   // Đồng bộ chọn lớp ở tab điểm danh
-  document.getElementById("select-attendance-class").value = classId;
+  const currentAttSelect = document.getElementById("select-attendance-class");
+  if (currentAttSelect && currentAttSelect.value !== "all") {
+    currentAttSelect.value = classId;
+  }
   renderAttendanceHistory();
   renderTuitionManagement();
   renderCalendar();
@@ -2581,8 +2616,8 @@ function populateClassDropdowns() {
 
   if (attendanceSelect) {
     const currentVal = attendanceSelect.value;
-    attendanceSelect.innerHTML = optionsHtml;
-    if (currentVal && appState.classes.some(c => c.id === currentVal)) {
+    attendanceSelect.innerHTML = `<option value="all">Tất cả các lớp</option>` + optionsHtml;
+    if (currentVal && (currentVal === "all" || appState.classes.some(c => c.id === currentVal))) {
       attendanceSelect.value = currentVal;
     }
   }
