@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Lý Lớp Học Tiếng Trung Online | 中文课堂管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Thanh điều hướng trên cùng -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-title"
+        style="font-size: 17px; font-weight: 700; color: var(--text-main); letter-spacing: -0.2px;">
+        Quản Lý Lớp Học Tiếng Trung
+      </div>
+
+      <div class="header-actions">
+        <button class="btn-cloud-sync" id="btn-cloud-sync" title="Đồng bộ Đám Mây (Supabase / Backend)" onclick="openCloudSyncModal()">
+          <span class="cloud-indicator-dot" id="cloud-indicator-dot"></span>
+          <span id="cloud-status-text">Đám Mây</span>
+        </button>
+
+        <button class="btn-icon" id="btn-settings" title="Cài đặt thông tin thầy & STK"
+          onclick="openTeacherSettingsModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+
+        <button class="btn-icon" id="btn-backup" title="Sao lưu / Khôi phục dữ liệu" onclick="openBackupModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- NỘI DUNG CHÍNH: PHÂN HỆ GIÁO VIÊN -->
+  <main id="view-teacher" class="main-content">
+    <!-- Hàng thống kê tổng quan -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon icon-classes">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+        </div>
+        <div class="stat-data">
+          <span class="stat-label">Lớp đang dạy</span>
+          <h3 id="stat-total-classes">0</h3>
+          <span class="stat-desc">Đang hoạt động online</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon icon-students">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <div class="stat-data">
+          <span class="stat-label">Tổng học viên</span>
+          <h3 id="stat-total-students">0</h3>
+          <span class="stat-desc">Trên toàn bộ các lớp</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon icon-lessons">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </div>
+        <div class="stat-data">
+          <span class="stat-label">Số buổi dạy tháng này</span>
+          <h3 id="stat-month-lessons">0</h3>
+          <span class="stat-desc" id="stat-month-name">Tháng này</span>
+        </div>
+      </div>
+
+      <div class="stat-card highlight">
+        <div class="stat-icon icon-tuition">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+        </div>
+        <div class="stat-data">
+          <span class="stat-label">Tổng học phí tháng này</span>
+          <h3 id="stat-month-tuition">0 ₫</h3>
+          <span class="stat-desc">Đã thu: <strong id="stat-collected-tuition" class="text-success">0 ₫</strong> | Còn:
+            <span id="stat-pending-tuition" class="text-danger">0 ₫</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Thanh chuyển tab chức năng -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="tab-classes" onclick="switchTeacherTab('tab-classes')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+        Danh Sách Lớp Học
+      </button>
+      <button class="nav-tab" data-tab="tab-attendance" onclick="switchTeacherTab('tab-attendance')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+        Điểm Danh Buổi Học
+      </button>
+      <button class="nav-tab" data-tab="tab-tuition" onclick="switchTeacherTab('tab-tuition')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="20" height="14" x="2" y="5" rx="2" />
+          <line x1="2" x2="22" y1="10" y2="10" />
+        </svg>
+        Quản Lý Học Phí
+      </button>
+      <button class="nav-tab" data-tab="tab-schedule" onclick="switchTeacherTab('tab-schedule')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        Thời Khóa Biểu Học
+      </button>
+    </nav>
+
+    <!-- TAB 1: DANH SÁCH LỚP HỌC -->
+    <section id="tab-classes" class="tab-panel active">
+      <div class="panel-header">
+        <button class="btn btn-primary" onclick="openClassModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Thêm Lớp Mới
+        </button>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input type="text" id="search-class-input" placeholder="Tìm tên lớp, cấp độ HSK..." oninput="renderClasses()">
+        </div>
+        <select id="filter-level-select" onchange="renderClasses()">
+          <option value="all">Tất cả cấp độ</option>
+          <option value="HSK 1">HSK 1 (Nhập môn)</option>
+          <option value="HSK 2">HSK 2 (Sơ cấp)</option>
+          <option value="HSK 3">HSK 3 (Trung cấp)</option>
+          <option value="HSK 4">HSK 4 (Nâng cao)</option>
+          <option value="HSK 5-6">HSK 5 - 6 (Cao cấp)</option>
+          <option value="Giao tiếp">Tiếng Trung Giao tiếp</option>
+          <option value="Khác">Khác</option>
+        </select>
+      </div>
+
+      <div id="classes-list-container" class="cards-grid">
+        <!-- Render động qua JS -->
+      </div>
+    </section>
+
+    <!-- TAB 2: ĐIỂM DANH & TỰ TÍNH BUỔI HỌC -->
+    <section id="tab-attendance" class="tab-panel">
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label for="select-attendance-class">Chọn lớp học:</label>
+          <select id="select-attendance-class" onchange="renderAttendanceHistory()">
+            <!-- Options nạp tự động -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Tóm tắt số buổi của lớp đang chọn -->
+      <div class="attendance-summary-card" id="class-attendance-summary">
+        <!-- JS điền thông tin -->
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Buổi số</th>
+              <th>Ngày học</th>
+              <th>Sĩ số có mặt</th>
+              <th>Tình trạng điểm danh</th>
+              <th style="text-align: right;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="attendance-history-table">
+            <!-- Nạp động qua JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 3: QUẢN LÝ HỌC PHÍ HÀNG THÁNG -->
+    <section id="tab-tuition" class="tab-panel">
+      <div class="panel-header">
+        <div class="header-button-group">
+          <button class="btn btn-secondary" onclick="exportTuitionToCSV()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Xuất Bảng Excel/CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label for="select-tuition-month">Tháng tính phí:</label>
+          <input type="month" id="select-tuition-month" onchange="renderTuitionManagement()">
+        </div>
+
+        <div class="filter-group">
+          <label for="select-tuition-class">Lớp học:</label>
+          <select id="select-tuition-class" onchange="renderTuitionManagement()">
+            <option value="all">Tất cả các lớp</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="select-tuition-status">Trạng thái:</label>
+          <select id="select-tuition-status" onchange="renderTuitionManagement()">
+            <option value="all">Tất cả</option>
+            <option value="unpaid">Chưa đóng</option>
+            <option value="paid">Đã đóng</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tuition-kpi-bar" id="tuition-kpi-bar">
+        <!-- Tóm tắt số tiền tháng -->
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Họ và Tên Học Viên</th>
+              <th>Lớp Học</th>
+              <th>Số buổi đã học</th>
+              <th>Đơn giá / Cách tính</th>
+              <th>Tổng cộng</th>
+              <th>Trạng thái học phí</th>
+            </tr>
+          </thead>
+          <tbody id="tuition-table-body">
+            <!-- Nạp động qua JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: THỜI KHÓA BIỂU DẠNG LỊCH (CALENDAR) -->
+    <section id="tab-schedule" class="tab-panel">
+      <div class="panel-header">
+        <div class="calendar-view-toggle">
+          <button id="btn-view-month" class="btn btn-sm btn-secondary" onclick="setCalendarViewMode('month')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Lịch Tháng
+          </button>
+          <button id="btn-view-week" class="btn btn-sm btn-secondary" onclick="setCalendarViewMode('week')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+              <line x1="10" y1="14" x2="10" y2="18" />
+              <line x1="14" y1="14" x2="14" y2="18" />
+            </svg>
+            Lịch Tuần
+          </button>
+        </div>
+      </div>
+
+      <!-- Thanh công cụ điều hướng lịch (Tháng trước, tháng sau, hôm nay, lọc lớp) -->
+      <div class="calendar-toolbar">
+        <div class="calendar-nav-group">
+          <button class="btn btn-secondary btn-sm" onclick="navCalendarPrev()" title="Tháng/Tuần trước">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="goToCalendarToday()">Hôm nay</button>
+          <button class="btn btn-secondary btn-sm" onclick="navCalendarNext()" title="Tháng/Tuần sau">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+          <h3 id="calendar-current-title" class="calendar-title-text">Tháng 10 / 2026</h3>
+        </div>
+
+        <div class="calendar-filter-group">
+          <label for="calendar-filter-class">Lọc theo lớp:</label>
+          <select id="calendar-filter-class" onchange="renderCalendar()">
+            <option value="all">Tất cả các lớp</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Chú thích các nhãn note trên lịch -->
+      <div class="calendar-legend-bar">
+        <span class="legend-item"><span class="legend-dot dot-hsk2"></span> HSK 1 - 2</span>
+        <span class="legend-item"><span class="legend-dot dot-hsk3"></span> HSK 3 - 4</span>
+        <span class="legend-item"><span class="legend-dot dot-gt"></span> Giao tiếp / Khác</span>
+        <span class="legend-item"><span class="legend-badge-sample">✓</span> Đã có nhật ký bài học</span>
+        <span class="legend-item"><span class="legend-badge-sample">⏱️</span> Lịch học dự kiến</span>
+      </div>
+
+      <!-- Vùng chứa Lịch (Calendar Container) -->
+      <div id="calendar-container" class="calendar-wrapper">
+        <!-- Render động qua JS -->
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: THÊM / SỬA LỚP HỌC -->
+  <div id="modal-class" class="modal-backdrop">
+    <div class="modal-box modal-class-box">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-class-title">Thêm Lớp Học Tiếng Trung Mới</h3>
+          <p class="modal-subtitle">Điền thông tin lớp (các mục không bắt buộc, có thể bổ sung sau)</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-class')">&times;</button>
+      </div>
+      <form id="form-class" onsubmit="handleSaveClass(event)">
+        <input type="hidden" id="class-id">
+        <div class="form-grid compact-grid">
+          <div class="form-group full">
+            <label for="class-name">Tên lớp học</label>
+            <input type="text" id="class-name" placeholder="Ví dụ: Tiếng Trung HSK 2 Căn Bản (K14)">
+          </div>
+
+          <div class="form-group">
+            <label for="class-level">Cấp độ (có thể để trống)</label>
+            <select id="class-level">
+              <option value="" selected>-- Không chọn / Để trống --</option>
+              <option value="HSK 1">HSK 1 (Nhập môn / Pinyin)</option>
+              <option value="HSK 2">HSK 2 (Sơ cấp)</option>
+              <option value="HSK 3">HSK 3 (Trung cấp)</option>
+              <option value="HSK 4">HSK 4 (Nâng cao)</option>
+              <option value="HSK 5-6">HSK 5 - 6 (Cao cấp)</option>
+              <option value="Giao tiếp">Tiếng Trung Giao tiếp Thực chiến</option>
+              <option value="Luyện thi">Luyện thi HSK / HSKK cấp tốc</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="class-schedule-days">Lịch học trong tuần</label>
+            <input type="text" id="class-schedule-days" placeholder="Ví dụ: Thứ 2 - 4 - 6">
+          </div>
+
+          <div class="form-group">
+            <label for="class-schedule-time">Khung giờ học</label>
+            <input type="text" id="class-schedule-time" placeholder="Ví dụ: 19:30 - 21:00">
+          </div>
+
+          <div class="form-group">
+            <label for="class-fee-type">Hình thức thu học phí</label>
+            <select id="class-fee-type" onchange="toggleFeeUnitLabel()">
+              <option value="per_lesson">Tính theo buổi học</option>
+              <option value="monthly">Tính cố định theo tháng</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="class-fee-amount"><span id="fee-amount-label">Học phí mỗi buổi (VNĐ)</span></label>
+            <input type="text" inputmode="numeric" id="class-fee-amount" oninput="formatMoneyInput(this)"
+              placeholder="Ví dụ: 120.000">
+          </div>
+
+          <div class="form-group full">
+            <label for="class-online-link">Link phòng học Online (Zoom / Google Meet)</label>
+            <input type="url" id="class-online-link" placeholder="https://meet.google.com/xyz hoặc Zoom ID">
+          </div>
+
+          <div class="form-group full">
+            <label for="class-notes">Mục tiêu & Ghi chú lớp</label>
+            <input type="text" id="class-notes" placeholder="Mục tiêu khóa học...">
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+          <div id="modal-class-delete-action">
+            <!-- Nút xóa lớp nếu đang sửa lớp -->
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modal-class')">Hủy bỏ</button>
+            <button type="submit" class="btn btn-primary">Lưu Lớp Học</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: QUẢN LÝ DANH SÁCH HỌC VIÊN CỦA LỚP -->
+  <div id="modal-students-list" class="modal-backdrop">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-class-students-title">Học Viên Trong Lớp</h3>
+          <p class="modal-subtitle" id="modal-class-students-sub"></p>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-students-list')">&times;</button>
+      </div>
+
+      <div class="modal-body-action-bar">
+        <button class="btn btn-primary btn-sm" onclick="openAddStudentModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Thêm Học Viên Vào Lớp
+        </button>
+      </div>
+
+      <div class="table-container modal-table">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mã HV</th>
+              <th>Họ và Tên</th>
+              <th>Tên Hán tự (中文名)</th>
+              <th>SĐT / Zalo</th>
+              <th>Ngày vào học</th>
+              <th>Ghi chú</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="modal-class-students-tbody">
+            <!-- Nạp động qua JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-students-list')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: THÊM / SỬA HỌC VIÊN -->
+  <div id="modal-student-form" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-student-form-title">Thêm Học Viên Mới</h3>
+        <button class="modal-close" onclick="closeModal('modal-student-form')">&times;</button>
+      </div>
+      <form id="form-student" onsubmit="handleSaveStudent(event)">
+        <input type="hidden" id="student-id">
+        <input type="hidden" id="student-target-class-id">
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="student-name">Họ và tên Tiếng Việt <span class="req">*</span></label>
+            <input type="text" id="student-name" required placeholder="Ví dụ: Nguyễn Văn An">
+          </div>
+
+          <div class="form-group">
+            <label for="student-chinese-name">Tên tiếng Trung (nếu có)</label>
+            <input type="text" id="student-chinese-name" placeholder="Ví dụ: 阮文安 (Wén'ān)">
+          </div>
+
+          <div class="form-group">
+            <label for="student-phone">Số điện thoại / Zalo <span class="req">*</span></label>
+            <input type="tel" id="student-phone" required placeholder="Ví dụ: 0912345678">
+          </div>
+
+          <div class="form-group">
+            <label for="student-code">Mã học viên</label>
+            <input type="text" id="student-code" placeholder="Tự tạo (ví dụ: HV001)">
+          </div>
+
+          <div class="form-group">
+            <label for="student-join-date">Ngày bắt đầu học</label>
+            <input type="date" id="student-join-date">
+          </div>
+
+          <div class="form-group">
+            <label for="student-note">Ghi chú cá nhân</label>
+            <input type="text" id="student-note" placeholder="Mục tiêu thi HSK, sở thích...">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-student-form')">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu Học Viên</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: THÊM / SỬA LỊCH DẠY VÀO THỜI KHÓA BIỂU (CHO HỌC VIÊN THEO DÕI) -->
+  <div id="modal-schedule-item" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-schedule-title">Thêm Ngày Dạy Vào Thời Khóa Biểu</h3>
+          <p class="modal-subtitle">Xếp lịch để học viên theo dõi ngày học, giờ học và chuẩn bị bài</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-schedule-item')">&times;</button>
+      </div>
+
+      <form id="form-schedule-item" onsubmit="handleSaveScheduleItem(event)">
+        <input type="hidden" id="sched-id">
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="sched-class-select">Lớp học <span class="req">*</span></label>
+            <select id="sched-class-select" required onchange="onScheduleClassChange()">
+              <!-- Nạp danh sách lớp -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="sched-date">Ngày dạy <span class="req">*</span></label>
+            <input type="date" id="sched-date" required>
+          </div>
+
+          <div class="form-group">
+            <label for="sched-time">Khung giờ dạy</label>
+            <input type="text" id="sched-time" placeholder="Ví dụ: 19:30 - 21:00 (tự động theo lớp)">
+          </div>
+
+          <div class="form-group full">
+            <label for="sched-topic">Chủ đề bài học / Nội dung dự kiến</label>
+            <input type="text" id="sched-topic" placeholder="Ví dụ: Bài 4 - Bạn làm nghề gì? (Ngữ pháp 是...的)">
+          </div>
+
+          <div class="form-group full">
+            <label for="sched-notes">Dặn dò / Chuẩn bị trước bài cho học viên</label>
+            <input type="text" id="sched-notes"
+              placeholder="Ví dụ: Học sinh xem trước từ mới trang 30, chuẩn bị mic...">
+          </div>
+
+          <div class="form-group full">
+            <label for="sched-link">Link phòng học Online (Zoom / Google Meet / Voov)</label>
+            <input type="url" id="sched-link" placeholder="https://meet.google.com/...">
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-danger btn-sm" id="btn-delete-sched-in-modal" style="display: none;"
+            onclick="deleteCurrentScheduleItem()">
+            🗑️ Xóa Buổi Dạy Này
+          </button>
+          <div style="display: flex; gap: 8px; margin-left: auto;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modal-schedule-item')">Hủy</button>
+            <button type="submit" class="btn btn-primary">Lưu Vào Lịch Dạy</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ĐIỂM DANH BUỔI HỌC (CHECK-IN HỌC VIÊN) -->
+  <div id="modal-attendance" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 560px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-attendance-title">Điểm Danh Học Viên</h3>
+          <p class="modal-subtitle">Check-in Có mặt / Vắng cho học viên để tự động cộng dồn số buổi</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-attendance')">&times;</button>
+      </div>
+
+      <form id="form-attendance" onsubmit="handleSaveAttendance(event)">
+        <input type="hidden" id="attendance-session-id">
+
+        <div class="form-grid" style="padding-bottom: 8px;">
+          <div class="form-group">
+            <label for="att-class-select">Lớp học</label>
+            <select id="att-class-select" onchange="onAttendanceClassChange()">
+              <!-- Nạp danh sách lớp -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="att-date">Ngày học</label>
+            <input type="date" id="att-date">
+          </div>
+        </div>
+
+        <div class="attendance-check-section">
+          <div class="section-title-row">
+            <h4>Danh sách học viên điểm danh</h4>
+            <div class="quick-check-actions">
+              <button type="button" class="btn-text" onclick="markAllAttendance('present')">✓ Tất cả Có mặt</button>
+              <button type="button" class="btn-text" onclick="markAllAttendance('absent')"
+                style="color: var(--danger);">✗ Tất cả Vắng</button>
+            </div>
+          </div>
+
+          <div id="attendance-students-checklist" class="attendance-students-list">
+            <!-- Nạp động danh sách học viên kèm nút check-in -->
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-attendance')">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu Điểm Danh</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CẬP NHẬT THANH TOÁN HỌC PHÍ -->
+  <div id="modal-tuition-payment" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Cập Nhật Nộp Học Phí</h3>
+        <button class="modal-close" onclick="closeModal('modal-tuition-payment')">&times;</button>
+      </div>
+      <form id="form-tuition-payment" onsubmit="handleSaveTuitionPayment(event)">
+        <input type="hidden" id="pay-student-id">
+        <input type="hidden" id="pay-class-id">
+        <input type="hidden" id="pay-month">
+
+        <div class="tuition-payment-info" id="pay-summary-box">
+          <!-- JS điền tóm tắt -->
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="pay-amount-paid">Số tiền học viên thực nộp (VNĐ)</label>
+            <input type="text" inputmode="numeric" id="pay-amount-paid" oninput="formatMoneyInput(this)"
+              placeholder="Ví dụ: 120.000">
+          </div>
+
+          <div class="form-group">
+            <label for="pay-date">Ngày nộp</label>
+            <input type="date" id="pay-date">
+          </div>
+
+          <div class="form-group">
+            <label for="pay-method">Phương thức</label>
+            <select id="pay-method">
+              <option value="bank">Chuyển khoản Ngân hàng</option>
+              <option value="cash">Tiền mặt</option>
+              <option value="momo">Ví điện tử Momo/ZaloPay</option>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label for="pay-note">Ghi chú thanh toán</label>
+            <input type="text" id="pay-note" placeholder="Ví dụ: Đã nhận qua Vietcombank, mẹ bạn đóng...">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-tuition-payment')">Hủy</button>
+          <button type="submit" class="btn btn-primary">Xác Nhận Đã Thu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CÀI ĐẶT THÔNG TIN THẦY GIÁO & STK NGÂN HÀNG -->
+  <div id="modal-teacher-settings" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Thông Tin Thầy Giáo & Nhận Học Phí</h3>
+        <button class="modal-close" onclick="closeModal('modal-teacher-settings')">&times;</button>
+      </div>
+      <form id="form-teacher-settings" onsubmit="handleSaveTeacherSettings(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="cfg-teacher-name">Họ tên Thầy giáo <span class="req">*</span></label>
+            <input type="text" id="cfg-teacher-name" required placeholder="Ví dụ: Thầy Quốc / 郭老师">
+          </div>
+
+          <div class="form-group">
+            <label for="cfg-teacher-phone">SĐT / Zalo liên hệ</label>
+            <input type="tel" id="cfg-teacher-phone" placeholder="09xxxxxxx">
+          </div>
+
+          <div class="form-group full">
+            <label for="cfg-bank-name">Ngân hàng</label>
+            <input type="text" id="cfg-bank-name" placeholder="Ví dụ: Vietcombank, Techcombank, MB Bank...">
+          </div>
+
+          <div class="form-group">
+            <label for="cfg-bank-account">Số tài khoản nhận học phí</label>
+            <input type="text" id="cfg-bank-account" placeholder="Ví dụ: 1029384756">
+          </div>
+
+          <div class="form-group">
+            <label for="cfg-bank-owner">Chủ tài khoản (viết hoa không dấu)</label>
+            <input type="text" id="cfg-bank-owner" placeholder="Ví dụ: NGUYEN VAN A">
+          </div>
+
+          <div class="form-group full">
+            <label for="cfg-tuition-notice">Lời nhắc khi học viên tra cứu học phí</label>
+            <textarea id="cfg-tuition-notice" rows="2"
+              placeholder="Ví dụ: Học phí đóng trước ngày mùng 5 hàng tháng. Nội dung CK: [Họ tên] - [Lớp]..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-teacher-settings')">Đóng</button>
+          <button type="submit" class="btn btn-primary">Lưu Cài Đặt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SAO LƯU & KHÔI PHỤC DỮ LIỆU -->
+  <div id="modal-backup" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Sao Lưu & Khôi Phục Dữ Liệu</h3>
+        <button class="modal-close" onclick="closeModal('modal-backup')">&times;</button>
+      </div>
+      <div class="backup-section">
+        <p class="backup-desc">Dữ liệu được lưu an toàn trực tiếp trên trình duyệt của máy bạn. Bạn có thể xuất file sao
+          lưu để chuyển sang máy tính khác hoặc lưu trữ định kỳ.</p>
+
+        <div class="backup-cards">
+          <div class="backup-card">
+            <h4>Xuất file dữ liệu (Backup)</h4>
+            <p>Tải toàn bộ danh sách lớp, học viên, lịch sử buổi học và học phí về máy dạng file <code>.json</code></p>
+            <button class="btn btn-primary btn-sm" onclick="exportDataToFile()">Tải Về File Sao Lưu</button>
+          </div>
+
+          <div class="backup-card">
+            <h4>Nhập lại file dữ liệu (Restore)</h4>
+            <p>Chọn file <code>.json</code> đã lưu trước đó để nạp lại dữ liệu.</p>
+            <input type="file" id="input-restore-file" accept=".json" style="display: none;"
+              onchange="handleRestoreFile(event)">
+            <button class="btn btn-secondary btn-sm"
+              onclick="document.getElementById('input-restore-file').click()">Chọn File Phục Hồi</button>
+          </div>
+
+          <div class="backup-card danger">
+            <h4>Khôi phục dữ liệu mẫu Tiếng Trung ban đầu</h4>
+            <p>Nạp lại bộ dữ liệu lớp học tiếng Trung HSK mẫu chuẩn để dùng thử lại từ đầu.</p>
+            <button class="btn btn-danger btn-sm" onclick="resetToSampleData()">Nạp Lại Dữ Liệu Mẫu</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-backup')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL XÁC NHẬN XÓA LỚP HỌC -->
+  <div id="modal-confirm-delete" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 420px; text-align: center; padding: 24px;">
+      <div style="font-size: 38px; margin-bottom: 8px;">🗑️</div>
+      <h3 style="font-size: 17px; margin-bottom: 8px; color: var(--danger);">Xác Nhận Xóa Lớp Học</h3>
+      <p id="confirm-delete-msg"
+        style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5;">
+        Bạn có chắc chắn muốn xóa lớp học này? Toàn bộ học viên và điểm danh thuộc lớp cũng sẽ bị xóa.
+      </p>
+      <div style="display: flex; justify-content: center; gap: 12px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-confirm-delete')">Hủy bỏ</button>
+        <button type="button" class="btn btn-danger" id="btn-execute-delete-class">Xác Nhận Xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CHI TIẾT LỊCH DẠY TRONG NGÀY -->
+  <div id="modal-calendar-day-detail" class="modal-backdrop">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="cal-modal-day-title">Chi Tiết Lịch Dạy Ngày</h3>
+          <p class="modal-subtitle" id="cal-modal-day-sub">Xem ca học, nội dung bài giảng và điểm danh</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-primary btn-sm" id="cal-modal-btn-add-session">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            + Thêm Buổi Dạy Ngày Này
+          </button>
+          <button class="modal-close" onclick="closeModal('modal-calendar-day-detail')">&times;</button>
+        </div>
+      </div>
+
+      <div class="calendar-day-modal-body" id="cal-modal-day-content">
+        <!-- Render động các ca học trong ngày -->
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-calendar-day-detail')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: KẾT NỐI VÀ ĐỒNG BỘ ĐÁM MÂY (SUPABASE / BACKEND) -->
+  <div id="modal-cloud-sync" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 580px;">
+      <div class="modal-header">
+        <div>
+          <h3>☁️ Đồng Bộ Dữ Liệu Đám Mây (Supabase)</h3>
+          <p class="modal-subtitle">Lưu trữ dữ liệu online vĩnh viễn, chia sẻ link cho nhiều người cùng xem</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-cloud-sync')">&times;</button>
+      </div>
+
+      <div style="padding: 16px 0;">
+        <div class="cloud-guide-box">
+          <strong>💡 Hướng dẫn 3 bước kết nối nhanh:</strong><br>
+          1. Đăng ký tài khoản miễn phí tại <a href="https://supabase.com" target="_blank" style="color: var(--primary); font-weight: 600;">Supabase.com</a> và tạo 1 Project mới.<br>
+          2. Mở <strong>SQL Editor</strong> trên Supabase, dán và chạy đoạn SQL bên dưới.<br>
+          3. Vào <strong>Project Settings -&gt; API</strong>, sao chép <code>Project URL</code> và <code>anon public key</code> dán vào ô dưới đây rồi bấm "Lưu &amp; Kết nối".
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-weight: 600; font-size: 13px;">Đoạn SQL khởi tạo (Nhấp để sao chép):</label>
+          <pre class="cloud-sql-block" id="sql-copy-block" title="Nhấp vào để sao chép toàn bộ SQL" onclick="copySqlScript()">CREATE TABLE IF NOT EXISTS zhongwen_app_data (
+  id TEXT PRIMARY KEY DEFAULT 'main',
+  data JSONB NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE zhongwen_app_data ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Cho phép tất cả" ON zhongwen_app_data FOR ALL TO anon USING (true) WITH CHECK (true);
+ALTER PUBLICATION supabase_realtime ADD TABLE zhongwen_app_data;</pre>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="copySqlScript()" style="margin-top: 4px;">
+            📋 Sao chép mã SQL
+          </button>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="cloud-supabase-url" style="font-weight: 600; font-size: 13px;">Supabase Project URL:</label>
+          <input type="text" id="cloud-supabase-url" class="form-control" placeholder="https://xyzabcdefg.supabase.co" autocomplete="off">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="cloud-supabase-key" style="font-weight: 600; font-size: 13px;">Supabase Anon Public Key:</label>
+          <input type="password" id="cloud-supabase-key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
+        </div>
+
+        <div id="cloud-status-detail" style="font-size: 13px; padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 14px; background: var(--bg-subtle);">
+          Trạng thái: <strong>Chưa kết nối</strong>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary" id="btn-save-cloud-config" onclick="saveCloudConfigAndConnect()">
+            💾 Lưu &amp; Kiểm Tra Kết Nối
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="manualPushToCloud()" title="Đẩy toàn bộ dữ liệu trên máy tính này lên đám mây">
+            ⬆️ Đẩy Dữ Liệu Lên Đám Mây
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="manualPullFromCloud()" title="Tải dữ liệu mới nhất từ đám mây về máy tính">
+            ⬇️ Tải Dữ Liệu Về Máy
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="margin-top: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-cloud-sync')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST THÔNG BÁO TIỆN DỤNG -->
+  <div id="toast" class="toast"></div>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="mock-data.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+</body>
+
+</html>
