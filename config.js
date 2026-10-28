@@ -1,9 +1,19 @@
 // ============================================================================
-// CẤU HÌNH KẾT NỐI DATABASE ĐÁM MÂY (SUPABASE / CLOUD BACKEND)
+// CẤU HÌNH KẾT NỐI DATABASE ĐÁM MÂY (GOOGLE FIREBASE FIRESTORE)
 // ============================================================================
+// Bạn có thể dán thông tin cấu hình từ Firebase Console của bạn vào đây, 
+// hoặc cấu hình trực tiếp qua nút ☁️ trên thanh menu của ứng dụng.
 
 window.ZHONGWEN_CONFIG = {
-  supabaseUrl: "https://weftggjqtvjswcnpulok.supabase.co",
-  supabaseAnonKey: "sb_publishable_IoKKYfm4rCoj5Z639WDFag_EMEvWXOY",
-  tableName: "zhongwen_app_data"
+  // Thay thế các thông số bên dưới bằng cấu hình từ Firebase của bạn:
+  firebaseConfig: {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    storageBucket: "",
+    messagingSenderId: "",
+    appId: ""
+  },
+  collectionName: "zhongwen_app_data",
+  docId: "main"
 };

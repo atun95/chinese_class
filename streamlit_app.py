@@ -51,25 +51,33 @@ def read_file(filename):
     return ""
 
 
-def get_supabase_from_secrets():
-    """Đọc URL và khóa client (anon hoặc publishable) từ Streamlit Secrets."""
-    url = ""
-    key = ""
+def get_firebase_from_secrets():
+    """Đọc cấu hình Firebase Firestore từ Streamlit Secrets."""
+    config = {}
     try:
-        if "SUPABASE_URL" in st.secrets:
-            url = str(st.secrets["SUPABASE_URL"]).strip()
-        if "SUPABASE_PUBLISHABLE_KEY" in st.secrets:
-            key = str(st.secrets["SUPABASE_PUBLISHABLE_KEY"]).strip()
-        elif "SUPABASE_KEY" in st.secrets:
-            key = str(st.secrets["SUPABASE_KEY"]).strip()
+        if "FIREBASE_CONFIG" in st.secrets:
+            raw = st.secrets["FIREBASE_CONFIG"]
+            if isinstance(raw, dict):
+                config = dict(raw)
+            else:
+                config = json.loads(str(raw).strip())
+        elif "FIREBASE_API_KEY" in st.secrets and "FIREBASE_PROJECT_ID" in st.secrets:
+            proj = str(st.secrets["FIREBASE_PROJECT_ID"]).strip()
+            config = {
+                "apiKey": str(st.secrets["FIREBASE_API_KEY"]).strip(),
+                "projectId": proj,
+                "authDomain": str(st.secrets.get("FIREBASE_AUTH_DOMAIN", f"{proj}.firebaseapp.com")).strip(),
+                "storageBucket": str(st.secrets.get("FIREBASE_STORAGE_BUCKET", f"{proj}.appspot.com")).strip(),
+                "appId": str(st.secrets.get("FIREBASE_APP_ID", "")).strip(),
+            }
     except Exception:
         pass
-    return url, key
+    return config
 
 
-def supabase_secrets_configured():
-    url, key = get_supabase_from_secrets()
-    return bool(url and key)
+def firebase_secrets_configured():
+    cfg = get_firebase_from_secrets()
+    return bool(cfg and cfg.get("apiKey") and cfg.get("projectId"))
 
 
 def build_full_html():
@@ -79,16 +87,16 @@ def build_full_html():
     mock_data_js = read_file("mock-data.js")
     app_js = read_file("app.js")
 
-    supabase_url, supabase_key = get_supabase_from_secrets()
+    fb_config = get_firebase_from_secrets()
 
     # Nếu có secrets từ Streamlit Cloud, tiêm trực tiếp vào config
     secrets_injection = ""
-    if supabase_url and supabase_key:
+    if fb_config and fb_config.get("apiKey") and fb_config.get("projectId"):
+        cfg_json = json.dumps(fb_config)
         secrets_injection = f"""
         <script>
             window.ZHONGWEN_CONFIG = window.ZHONGWEN_CONFIG || {{}};
-            window.ZHONGWEN_CONFIG.supabaseUrl = "{supabase_url}";
-            window.ZHONGWEN_CONFIG.supabaseAnonKey = "{supabase_key}";
+            window.ZHONGWEN_CONFIG.firebaseConfig = {cfg_json};
         </script>
         """
 
@@ -98,12 +106,15 @@ def build_full_html():
         f'<style>\n{style_css}\n</style>'
     )
 
-    # Nhúng Supabase CDN SDK trước các script ứng dụng
-    supabase_cdn = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>'
+    # Nhúng Google Firebase Compat CDN SDK trước các script ứng dụng
+    firebase_cdn = """
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    """
 
     # Thay thế các script bằng inline code
     scripts_replacement = f"""
-    {supabase_cdn}
+    {firebase_cdn}
     <script>
     {config_js}
     </script>
@@ -139,17 +150,16 @@ with st.sidebar:
     st.title("🎓 Quản Lý Lớp Học")
     st.markdown("---")
     st.markdown("### ☁️ Trạng Thái Backend")
-    if supabase_secrets_configured():
-        st.success("Đã cấu hình **Supabase** qua Streamlit Secrets. Ứng dụng tự động lưu và tải dữ liệu đám mây.")
+    if firebase_secrets_configured():
+        st.success("Đã cấu hình **Google Firebase** qua Streamlit Secrets. Dữ liệu lưu trữ lâu dài và không bao giờ bị tạm dừng.")
     else:
-        st.warning(
-            "Chưa thấy `SUPABASE_URL` và `SUPABASE_PUBLISHABLE_KEY` (hoặc `SUPABASE_KEY`) trong Streamlit Secrets. "
-            "Thêm trong App settings → Secrets, hoặc cấu hình qua nút ☁️ trên thanh menu. "
-            "**Không** dùng `SUPABASE_SECRET_KEY` trong app trình duyệt."
+        st.info(
+            "Có thể cấu hình `FIREBASE_CONFIG` trong Streamlit Secrets (App settings → Secrets), "
+            "hoặc bấm biểu tượng ☁️ trên thanh menu để kết nối trực tiếp."
         )
     st.markdown("---")
     st.markdown("### 📌 Hướng dẫn nhanh:")
-    st.markdown("1. Dữ liệu thay đổi trên máy tính sẽ tự động lưu lên đám mây.")
+    st.markdown("1. Dữ liệu thay đổi trên máy tính sẽ tự động lưu lên đám mây Firebase.")
     st.markdown("2. Người khác mở link Streamlit này sẽ thấy dữ liệu mới nhất.")
     st.markdown("3. Bấm biểu tượng ☁️ trên thanh menu để kiểm tra hoặc đổi cấu hình.")
 

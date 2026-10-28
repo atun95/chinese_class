@@ -3,11 +3,12 @@
 // ============================================================================
 
 const STORAGE_KEY = "zhongwen_class_manager_data_v1";
-const CLOUD_CONFIG_KEY = "zhongwen_supabase_config_v1";
+const CLOUD_CONFIG_KEY = "zhongwen_firebase_config_v1";
 const CLOUD_LOCAL_META_KEY = "zhongwen_cloud_local_meta_v1";
 const CLOUD_ROW_ID = "main";
 
-let supabaseClient = null;
+let firestoreDb = null;
+let firebaseApp = null;
 let cloudPushTimer = null;
 let cloudSyncPaused = false;
 
@@ -139,45 +140,103 @@ function applyParsedAppState(parsed) {
   syncSchedulesToSessions();
 }
 
-function getCloudTableName() {
+function getCloudCollectionName() {
   const cfg = window.ZHONGWEN_CONFIG || {};
-  return cfg.tableName || "zhongwen_app_data";
+  return cfg.collectionName || cfg.tableName || "zhongwen_app_data";
 }
 
-function getEffectiveSupabaseConfig() {
-  let url = "";
-  let key = "";
+function getCloudDocId() {
+  const cfg = window.ZHONGWEN_CONFIG || {};
+  return cfg.docId || CLOUD_ROW_ID || "main";
+}
+
+function parseFirebaseConfigInput(text) {
+  if (!text || typeof text !== "string") return null;
+  const clean = text.trim();
+  if (!clean) return null;
+
+  // 1. Thử phân tích JSON tiêu chuẩn
+  try {
+    const parsed = JSON.parse(clean);
+    if (parsed && typeof parsed === "object" && parsed.apiKey && parsed.projectId) {
+      return parsed;
+    }
+  } catch (e) {}
+
+  // 2. Tìm khối object { ... } trong đoạn mã dán vào
+  const objMatch = clean.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    const candidate = objMatch[0];
+    try {
+      // Chuyển cú pháp JS object (keys không có nháy kép) thành chuỗi JSON hợp lệ
+      const jsonLike = candidate
+        .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
+        .replace(/,\s*}/g, "}")
+        .replace(/'/g, '"');
+      const parsed = JSON.parse(jsonLike);
+      if (parsed && parsed.apiKey && parsed.projectId) return parsed;
+    } catch (e) {}
+  }
+
+  // 3. Dự phòng trích xuất regex từng trường
+  const extract = (key) => {
+    const m = clean.match(new RegExp(`["']?${key}["']?\\s*:\\s*["']([^"']+)["']`));
+    return m ? m[1].trim() : "";
+  };
+
+  const apiKey = extract("apiKey");
+  const projectId = extract("projectId");
+  if (apiKey && projectId) {
+    return {
+      apiKey,
+      projectId,
+      authDomain: extract("authDomain") || `${projectId}.firebaseapp.com`,
+      storageBucket: extract("storageBucket") || `${projectId}.appspot.com`,
+      messagingSenderId: extract("messagingSenderId") || "",
+      appId: extract("appId") || ""
+    };
+  }
+
+  return null;
+}
+
+function getEffectiveFirebaseConfig() {
+  let cfg = null;
   try {
     const saved = localStorage.getItem(CLOUD_CONFIG_KEY);
     if (saved) {
-      const parsed = JSON.parse(saved);
-      url = parsed.supabaseUrl || "";
-      key = parsed.supabaseAnonKey || "";
+      cfg = JSON.parse(saved);
     }
   } catch (e) {
-    console.warn("Không đọc được cấu hình cloud đã lưu:", e);
+    console.warn("Không đọc được cấu hình firebase đã lưu:", e);
   }
   const embedded = window.ZHONGWEN_CONFIG || {};
-  if (!url) url = embedded.supabaseUrl || "";
-  if (!key) key = embedded.supabaseAnonKey || "";
-  return { supabaseUrl: url.trim(), supabaseAnonKey: key.trim() };
+  if (!cfg || !cfg.apiKey) {
+    cfg = embedded.firebaseConfig || null;
+  }
+  return cfg;
 }
 
-function initSupabaseClient() {
-  supabaseClient = null;
-  if (typeof supabase === "undefined" || !supabase.createClient) {
+function initFirebaseClient() {
+  firestoreDb = null;
+  if (typeof firebase === "undefined" || !firebase.firestore) {
     return false;
   }
-  const { supabaseUrl, supabaseAnonKey } = getEffectiveSupabaseConfig();
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const config = getEffectiveFirebaseConfig();
+  if (!config || !config.apiKey || !config.projectId) {
     return false;
   }
   try {
-    supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    if (!firebase.apps || !firebase.apps.length) {
+      firebaseApp = firebase.initializeApp(config);
+    } else {
+      firebaseApp = firebase.apps[0];
+    }
+    firestoreDb = firebase.firestore();
     return true;
   } catch (e) {
-    console.error("Không khởi tạo được Supabase client:", e);
-    supabaseClient = null;
+    console.error("Không khởi tạo được Google Firebase:", e);
+    firestoreDb = null;
     return false;
   }
 }
@@ -201,49 +260,52 @@ function cloudHasUsableData(data) {
 }
 
 async function fetchCloudRow() {
-  if (!supabaseClient) return null;
-  const tableName = getCloudTableName();
-  const { data, error } = await supabaseClient
-    .from(tableName)
-    .select("id, data, updated_at")
-    .eq("id", CLOUD_ROW_ID)
-    .maybeSingle();
-  if (error) {
-    throw error;
+  if (!firestoreDb) return null;
+  const colName = getCloudCollectionName();
+  const docId = getCloudDocId();
+  const docSnap = await firestoreDb.collection(colName).doc(docId).get();
+  if (!docSnap.exists) {
+    return null;
   }
-  return data;
+  return docSnap.data();
 }
 
 async function pushToCloud(options) {
   const silent = options && options.silent;
-  if (!supabaseClient || cloudSyncPaused) {
-    if (!silent) showToast("Chưa kết nối Supabase — bấm ☁️ để cấu hình.");
+  if (!firestoreDb || cloudSyncPaused) {
+    if (!silent) showToast("Chưa kết nối Firebase — bấm ☁️ để cấu hình.");
     return { ok: false };
   }
-  const tableName = getCloudTableName();
+  const colName = getCloudCollectionName();
+  const docId = getCloudDocId();
   const payload = {
-    id: CLOUD_ROW_ID,
+    id: docId,
     data: appState,
     updated_at: new Date().toISOString()
   };
-  const { error } = await supabaseClient.from(tableName).upsert(payload);
-  if (error) {
-    console.error("Lỗi đẩy dữ liệu lên cloud:", error);
-    updateCloudStatusUI(error.message);
-    if (!silent) showToast("Lỗi lưu đám mây: " + (error.message || "Không xác định"));
+  try {
+    await firestoreDb.collection(colName).doc(docId).set(payload);
+    localStorage.setItem(
+      CLOUD_LOCAL_META_KEY,
+      JSON.stringify({ updatedAt: payload.updated_at })
+    );
+    updateCloudStatusUI(null, payload.updated_at);
+    if (!silent) showToast("Đã lưu dữ liệu lên Google Firebase!");
+    return { ok: true };
+  } catch (error) {
+    console.error("Lỗi đẩy dữ liệu lên Firebase:", error);
+    let msg = error.message || "Không xác định";
+    if (error.code === "permission-denied") {
+      msg = "Quyền truy cập bị từ chối. Hãy kiểm tra tab Rules trên Firebase Console.";
+    }
+    updateCloudStatusUI(msg);
+    if (!silent) showToast("Lỗi lưu đám mây: " + msg);
     return { ok: false, error };
   }
-  localStorage.setItem(
-    CLOUD_LOCAL_META_KEY,
-    JSON.stringify({ updatedAt: payload.updated_at })
-  );
-  updateCloudStatusUI(null, payload.updated_at);
-  if (!silent) showToast("Đã lưu dữ liệu lên đám mây!");
-  return { ok: true };
 }
 
 function pushToCloudDebounced() {
-  if (!supabaseClient || cloudSyncPaused) return;
+  if (!firestoreDb || cloudSyncPaused) return;
   if (cloudPushTimer) clearTimeout(cloudPushTimer);
   cloudPushTimer = setTimeout(() => {
     pushToCloud({ silent: true }).catch(err => {
@@ -255,8 +317,8 @@ function pushToCloudDebounced() {
 
 async function pullFromCloud(options) {
   const silent = options && options.silent;
-  if (!supabaseClient) {
-    if (!silent) showToast("Chưa kết nối Supabase.");
+  if (!firestoreDb) {
+    if (!silent) showToast("Chưa kết nối Firebase.");
     return { ok: false };
   }
   cloudSyncPaused = true;
@@ -279,8 +341,12 @@ async function pullFromCloud(options) {
     return { ok: true, row };
   } catch (err) {
     console.error("Lỗi tải dữ liệu từ cloud:", err);
-    updateCloudStatusUI(err.message);
-    if (!silent) showToast("Lỗi tải đám mây: " + (err.message || "Không xác định"));
+    let msg = err.message || "Không xác định";
+    if (err.code === "permission-denied") {
+      msg = "Quyền truy cập bị từ chối. Hãy kiểm tra tab Rules trên Firebase Console.";
+    }
+    updateCloudStatusUI(msg);
+    if (!silent) showToast("Lỗi tải đám mây: " + msg);
     return { ok: false, error: err };
   } finally {
     cloudSyncPaused = false;
@@ -288,7 +354,7 @@ async function pullFromCloud(options) {
 }
 
 async function pullFromCloudOnStartup(hadLocalBeforeLoad) {
-  if (!supabaseClient) return false;
+  if (!firestoreDb) return false;
   try {
     const row = await fetchCloudRow();
     if (!row || !cloudHasUsableData(row.data)) {
@@ -323,7 +389,7 @@ function updateCloudStatusUI(errorMessage, updatedAt) {
   const dot = document.getElementById("cloud-indicator-dot");
   const statusText = document.getElementById("cloud-status-text");
   const detail = document.getElementById("cloud-status-detail");
-  const connected = !!supabaseClient && !errorMessage;
+  const connected = !!firestoreDb && !errorMessage;
 
   if (dot) {
     dot.classList.toggle("connected", connected);
@@ -339,48 +405,58 @@ function updateCloudStatusUI(errorMessage, updatedAt) {
       const timeLabel = updatedAt
         ? formatDateDisplay(String(updatedAt).split("T")[0]) + " " + (String(updatedAt).split("T")[1] || "").substring(0, 8)
         : "vừa xong";
-      detail.innerHTML = `Trạng thái: <strong style="color: var(--success, #27ae60);">Đã kết nối Supabase</strong><br>Cập nhật gần nhất: ${escapeHtml(timeLabel)}`;
+      detail.innerHTML = `Trạng thái: <strong style="color: var(--success, #27ae60);">Đã kết nối Google Firebase (Không hết hạn)</strong><br>Cập nhật gần nhất: ${escapeHtml(timeLabel)}`;
     } else {
-      detail.innerHTML = "Trạng thái: <strong>Chưa kết nối</strong>";
+      detail.innerHTML = "Trạng thái: <strong>Chưa kết nối Firebase</strong>";
     }
   }
 }
 
 function openCloudSyncModal() {
-  const cfg = getEffectiveSupabaseConfig();
-  const urlInput = document.getElementById("cloud-supabase-url");
-  const keyInput = document.getElementById("cloud-supabase-key");
-  if (urlInput) urlInput.value = cfg.supabaseUrl || "";
-  if (keyInput) keyInput.value = cfg.supabaseAnonKey || "";
+  const cfg = getEffectiveFirebaseConfig();
+  const input = document.getElementById("cloud-firebase-config");
+  if (input && cfg && cfg.apiKey) {
+    input.value = JSON.stringify(cfg, null, 2);
+  }
   updateCloudStatusUI();
   openModal("modal-cloud-sync");
 }
 
 async function saveCloudConfigAndConnect() {
-  const urlInput = document.getElementById("cloud-supabase-url");
-  const keyInput = document.getElementById("cloud-supabase-key");
-  const url = urlInput ? urlInput.value.trim() : "";
-  const key = keyInput ? keyInput.value.trim() : "";
-  if (!url || !key) {
-    showToast("Vui lòng nhập đủ Project URL và Anon Key.");
+  const input = document.getElementById("cloud-firebase-config");
+  const rawText = input ? input.value.trim() : "";
+  if (!rawText) {
+    showToast("Vui lòng dán đoạn mã firebaseConfig.");
     return;
   }
-  localStorage.setItem(
-    CLOUD_CONFIG_KEY,
-    JSON.stringify({ supabaseUrl: url, supabaseAnonKey: key })
-  );
-  if (!initSupabaseClient()) {
-    updateCloudStatusUI("Không khởi tạo được Supabase client");
-    showToast("Không kết nối được — kiểm tra URL/Key.");
+
+  const parsedConfig = parseFirebaseConfigInput(rawText);
+  if (!parsedConfig || !parsedConfig.apiKey || !parsedConfig.projectId) {
+    showToast("Không đọc được cấu hình hợp lệ. Vui lòng kiểm tra lại mã firebaseConfig (cần có apiKey và projectId).");
     return;
   }
+
+  localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(parsedConfig));
+
+  if (!initFirebaseClient()) {
+    updateCloudStatusUI("Không khởi tạo được Firebase");
+    showToast("Không khởi tạo được Firebase — kiểm tra lại cấu hình.");
+    return;
+  }
+
   try {
     await fetchCloudRow();
     updateCloudStatusUI(null);
-    showToast("Kết nối Supabase thành công!");
+    showToast("Kết nối Google Firebase thành công!");
+    // Đẩy dữ liệu hiện tại lên nếu đám mây còn trống
+    await pullFromCloudOnStartup(true);
   } catch (err) {
-    updateCloudStatusUI(err.message);
-    showToast("Lỗi kiểm tra kết nối: " + (err.message || ""));
+    let msg = err.message || "";
+    if (err.code === "permission-denied") {
+      msg = "Quyền truy cập bị từ chối. Hãy vào tab Rules trên Firebase Firestore và Publish quy tắc đọc/ghi.";
+    }
+    updateCloudStatusUI(msg);
+    showToast("Lỗi kiểm tra kết nối: " + msg);
   }
 }
 
@@ -401,24 +477,24 @@ function copySqlScript() {
   const block = document.getElementById("sql-copy-block");
   const text = block ? block.innerText : "";
   if (!text) {
-    showToast("Không tìm thấy đoạn SQL.");
+    showToast("Không tìm thấy đoạn mã quy tắc.");
     return;
   }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => {
-      showToast("Đã sao chép mã SQL!");
+      showToast("Đã sao chép Rules bảo mật Firebase!");
     }).catch(() => {
       showToast("Không sao chép được — hãy chọn và copy thủ công.");
     });
   } else {
-    showToast("Hãy chọn và copy đoạn SQL thủ công.");
+    showToast("Hãy chọn và copy đoạn mã thủ công.");
   }
 }
 
 async function bootstrapApp() {
   const hadLocalBeforeLoad = !!localStorage.getItem(STORAGE_KEY);
   loadDataFromStorage();
-  initSupabaseClient();
+  initFirebaseClient();
   await pullFromCloudOnStartup(hadLocalBeforeLoad);
   updateCloudStatusUI();
   initApp();

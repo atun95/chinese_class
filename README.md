@@ -58,6 +58,6 @@ Phần mềm được thiết kế dành riêng cho **Giáo viên dạy Tiếng 
 
 ## 💾 Lưu Trữ Dữ Liệu
 - **Local**: Tự động lưu trên trình duyệt (`localStorage`).
-- **Đám mây (Supabase)**: Bấm **☁️ Đám Mây** để cấu hình URL + Anon Key; mọi thay đổi tự động đồng bộ lên bảng `zhongwen_app_data` (chạy [`setup_database.sql`](setup_database.sql) trên Supabase trước).
-- **Streamlit Cloud**: Thêm `SUPABASE_URL` và `SUPABASE_PUBLISHABLE_KEY` (hoặc `SUPABASE_KEY` anon cũ) trong App settings → Secrets — xem [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example). Không dùng **secret key** trên trình duyệt.
-- **Sao lưu file**: Biểu tượng **Download** ở góc trên để xuất `.json` dự phòng.
+- **Đám mây (Google Firebase Firestore)**: Bấm **☁️ Đám Mây** để cấu hình `firebaseConfig`. Dữ liệu lưu vĩnh viễn trên đám mây của Google, **không bao giờ bị tự động tạm dừng/hết hạn** như Supabase free tier. Quy tắc bảo mật xem tại [`firestore.rules`](firestore.rules).
+- **Streamlit Cloud**: Thêm `FIREBASE_CONFIG` trong App settings → Secrets — xem [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example).
+- **Sao lưu file**: Biểu tượng **Download** ở góc trên để xuất `.json` dự phòng về máy bất cứ lúc nào.

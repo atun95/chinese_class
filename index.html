@@ -23,7 +23,7 @@
       </div>
 
       <div class="header-actions">
-        <button class="btn-cloud-sync" id="btn-cloud-sync" title="Đồng bộ Đám Mây (Supabase / Backend)" onclick="openCloudSyncModal()">
+        <button class="btn-cloud-sync" id="btn-cloud-sync" title="Đồng bộ Đám Mây (Google Firebase)" onclick="openCloudSyncModal()">
           <span class="cloud-indicator-dot" id="cloud-indicator-dot"></span>
           <span id="cloud-status-text">Đám Mây</span>
         </button>
@@ -799,48 +799,50 @@
     </div>
   </div>
 
-  <!-- MODAL: KẾT NỐI VÀ ĐỒNG BỘ ĐÁM MÂY (SUPABASE / BACKEND) -->
+  <!-- MODAL: KẾT NỐI VÀ ĐỒNG BỘ ĐÁM MÂY (GOOGLE FIREBASE FIRESTORE) -->
   <div id="modal-cloud-sync" class="modal-backdrop">
-    <div class="modal-box" style="max-width: 580px;">
+    <div class="modal-box" style="max-width: 600px;">
       <div class="modal-header">
         <div>
-          <h3>☁️ Đồng Bộ Dữ Liệu Đám Mây (Supabase)</h3>
-          <p class="modal-subtitle">Lưu trữ dữ liệu online vĩnh viễn, chia sẻ link cho nhiều người cùng xem</p>
+          <h3>☁️ Đồng Bộ Dữ Liệu Đám Mây (Google Firebase)</h3>
+          <p class="modal-subtitle">Lưu trữ dữ liệu online lâu dài, không bao giờ bị tạm dừng/hết hạn</p>
         </div>
         <button class="modal-close" onclick="closeModal('modal-cloud-sync')">&times;</button>
       </div>
 
       <div style="padding: 16px 0;">
         <div class="cloud-guide-box">
-          <strong>💡 Hướng dẫn 3 bước kết nối nhanh:</strong><br>
-          1. Đăng ký tài khoản miễn phí tại <a href="https://supabase.com" target="_blank" style="color: var(--primary); font-weight: 600;">Supabase.com</a> và tạo 1 Project mới.<br>
-          2. Mở <strong>SQL Editor</strong> trên Supabase, dán và chạy đoạn SQL bên dưới.<br>
-          3. Vào <strong>Project Settings -&gt; API</strong>, sao chép <code>Project URL</code> và <code>anon public key</code> dán vào ô dưới đây rồi bấm "Lưu &amp; Kết nối".
+          <strong>💡 Hướng dẫn 3 bước kết nối Google Firebase (Miễn phí vĩnh viễn):</strong><br>
+          1. Truy cập <a href="https://console.firebase.google.com" target="_blank" style="color: var(--primary); font-weight: 600;">console.firebase.google.com</a>, đăng nhập Google và bấm <strong>Tạo dự án</strong> (Create a project).<br>
+          2. Vào mục <strong>Build &rarr; Firestore Database</strong> &rarr; bấm <strong>Create database</strong> (ở tab <em>Rules</em> dán đoạn Rules bên dưới và bấm <em>Publish</em>).<br>
+          3. Vào cài đặt dự án (Project settings) hoặc bấm biểu tượng Web <strong>&lt;/&gt;</strong> để lấy đoạn mã <code>firebaseConfig</code> rồi dán vào ô bên dưới.
         </div>
 
         <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-weight: 600; font-size: 13px;">Đoạn SQL khởi tạo (Nhấp để sao chép):</label>
-          <pre class="cloud-sql-block" id="sql-copy-block" title="Nhấp vào để sao chép toàn bộ SQL" onclick="copySqlScript()">CREATE TABLE IF NOT EXISTS zhongwen_app_data (
-  id TEXT PRIMARY KEY DEFAULT 'main',
-  data JSONB NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-ALTER TABLE zhongwen_app_data ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Cho phép tất cả" ON zhongwen_app_data FOR ALL TO anon USING (true) WITH CHECK (true);
-ALTER PUBLICATION supabase_realtime ADD TABLE zhongwen_app_data;</pre>
+          <label style="font-weight: 600; font-size: 13px;">Quy tắc bảo mật Firestore (Tab "Rules" trên Firebase Console):</label>
+          <pre class="cloud-sql-block" id="sql-copy-block" title="Nhấp vào để sao chép Rules" onclick="copySqlScript()">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /zhongwen_app_data/{document} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
           <button type="button" class="btn btn-secondary btn-sm" onclick="copySqlScript()" style="margin-top: 4px;">
-            📋 Sao chép mã SQL
+            📋 Sao chép Rules bảo mật
           </button>
         </div>
 
         <div class="form-group" style="margin-bottom: 12px;">
-          <label for="cloud-supabase-url" style="font-weight: 600; font-size: 13px;">Supabase Project URL:</label>
-          <input type="text" id="cloud-supabase-url" class="form-control" placeholder="https://xyzabcdefg.supabase.co" autocomplete="off">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 14px;">
-          <label for="cloud-supabase-key" style="font-weight: 600; font-size: 13px;">Supabase Publishable / Anon Key:</label>
-          <input type="password" id="cloud-supabase-key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
+          <label for="cloud-firebase-config" style="font-weight: 600; font-size: 13px;">Dán đoạn mã <code>firebaseConfig</code> (hoặc mã JSON):</label>
+          <textarea id="cloud-firebase-config" class="form-control" rows="5" placeholder='const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "my-app.firebaseapp.com",
+  projectId: "my-app-12345",
+  storageBucket: "my-app.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abcdef..."
+};' style="font-family: Consolas, Monaco, monospace; font-size: 12px;"></textarea>
         </div>
 
         <div id="cloud-status-detail" style="font-size: 13px; padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 14px; background: var(--bg-subtle);">
@@ -870,10 +872,12 @@ ALTER PUBLICATION supabase_realtime ADD TABLE zhongwen_app_data;</pre>
   <div id="toast" class="toast"></div>
 
   <!-- SCRIPTS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- GOOGLE FIREBASE SDK (COMPAT) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="config.js"></script>
   <script src="mock-data.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 
 </html>
