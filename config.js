@@ -1,18 +1,15 @@
 // ============================================================================
 // CẤU HÌNH KẾT NỐI DATABASE ĐÁM MÂY (GOOGLE FIREBASE FIRESTORE)
 // ============================================================================
-// Bạn có thể dán thông tin cấu hình từ Firebase Console của bạn vào đây, 
-// hoặc cấu hình trực tiếp qua nút ☁️ trên thanh menu của ứng dụng.
 
 window.ZHONGWEN_CONFIG = {
-  // Thay thế các thông số bên dưới bằng cấu hình từ Firebase của bạn:
   firebaseConfig: {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyDVzDHGZfO6VJKeqFcvY3667EdhSp_DirI",
+    authDomain: "class-management-8d12d.firebaseapp.com",
+    projectId: "class-management-8d12d",
+    storageBucket: "class-management-8d12d.firebasestorage.app",
+    messagingSenderId: "185158440557",
+    appId: "1:185158440557:web:46af84fb7419a6561f5164"
   },
   collectionName: "zhongwen_app_data",
   docId: "main"
