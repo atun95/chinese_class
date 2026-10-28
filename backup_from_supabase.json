@@ -1,0 +1,364 @@
+{
+  "classes": [
+    {
+      "id": "cls-mvg8knjy",
+      "name": "Lớp công ty Tiên",
+      "level": "",
+      "notes": "",
+      "feeType": "per_lesson",
+      "createdAt": "2026-10-20",
+      "feeAmount": 50000,
+      "onlineLink": "https://meet.google.com/weh-njvy-szt",
+      "scheduleDays": "",
+      "scheduleTime": ""
+    },
+    {
+      "id": "cls-mvg8mc87",
+      "name": "Lớp Ngọc-Phúc-Trâm",
+      "level": "",
+      "notes": "",
+      "feeType": "per_lesson",
+      "createdAt": "2026-10-20",
+      "feeAmount": 50000,
+      "onlineLink": "https://meet.google.com/weh-njvy-szt",
+      "scheduleDays": "",
+      "scheduleTime": ""
+    }
+  ],
+  "payments": [],
+  "sessions": [
+    {
+      "id": "ses-mvg8v45p502n",
+      "date": "2026-10-20",
+      "classId": "cls-mvg8mc87",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8mmpa": "present",
+        "hv-mvg8mtoj": "present",
+        "hv-mvg8myr1": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": "19:00"
+    },
+    {
+      "id": "ses-mvgczpcsuu6m",
+      "date": "2026-10-21",
+      "classId": "cls-mvg8knjy",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8lcdy": "present",
+        "hv-mvg8lis5": "present",
+        "hv-mvg8lrzg": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": "19:00 - 20:30"
+    },
+    {
+      "id": "ses-mvgi6axaqcq0",
+      "date": "2026-10-23",
+      "classId": "cls-mvg8mc87",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8mmpa": "present",
+        "hv-mvg8mtoj": "present",
+        "hv-mvg8myr1": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": "19:00 - 20:30"
+    },
+    {
+      "id": "ses-mvhgl4hr903d",
+      "date": "2026-10-04",
+      "classId": "cls-mvg8knjy",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8lcdy": "present",
+        "hv-mvg8lis5": "present",
+        "hv-mvg8lrzg": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": ""
+    },
+    {
+      "id": "ses-mvhgl8mvylaf",
+      "date": "2026-10-04",
+      "classId": "cls-mvg8mc87",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8mmpa": "present",
+        "hv-mvg8mtoj": "present",
+        "hv-mvg8myr1": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": ""
+    },
+    {
+      "id": "ses-mvhgld7pxvc3",
+      "date": "2026-10-05",
+      "classId": "cls-mvg8mc87",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8mmpa": "present",
+        "hv-mvg8mtoj": "present",
+        "hv-mvg8myr1": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": ""
+    },
+    {
+      "id": "ses-mvhglmb7kplt",
+      "date": "2026-10-11",
+      "classId": "cls-mvg8knjy",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8lcdy": "present",
+        "hv-mvg8lis5": "present",
+        "hv-mvg8lrzg": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": ""
+    },
+    {
+      "id": "ses-mvhglpwduay0",
+      "date": "2026-10-11",
+      "classId": "cls-mvg8mc87",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8mmpa": "present",
+        "hv-mvg8mtoj": "present",
+        "hv-mvg8myr1": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": ""
+    },
+    {
+      "id": "ses-mvhglw79hc6r",
+      "date": "2026-10-13",
+      "classId": "cls-mvg8mc87",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8mmpa": "present",
+        "hv-mvg8mtoj": "present",
+        "hv-mvg8myr1": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": ""
+    },
+    {
+      "id": "ses-mvhglzsu62v3",
+      "date": "2026-10-18",
+      "classId": "cls-mvg8knjy",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8lcdy": "present",
+        "hv-mvg8lis5": "present",
+        "hv-mvg8lrzg": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": ""
+    },
+    {
+      "id": "ses-mvhgm2rcrsew",
+      "date": "2026-10-18",
+      "classId": "cls-mvg8mc87",
+      "homework": "",
+      "attendance": {
+        "hv-mvg8mmpa": "present",
+        "hv-mvg8mtoj": "present",
+        "hv-mvg8myr1": "present"
+      },
+      "lessonTopic": "Buổi học Tiếng Trung",
+      "sessionTime": ""
+    }
+  ],
+  "students": [
+    {
+      "id": "hv-mvg8lcdy",
+      "code": "HV001",
+      "name": "c Vy",
+      "note": "",
+      "phone": "1",
+      "classId": "cls-mvg8knjy",
+      "joinDate": "2026-10-20",
+      "chineseName": "薇"
+    },
+    {
+      "id": "hv-mvg8lis5",
+      "code": "HV002",
+      "name": "Trân",
+      "note": "",
+      "phone": "2",
+      "classId": "cls-mvg8knjy",
+      "joinDate": "2026-10-20",
+      "chineseName": "珍"
+    },
+    {
+      "id": "hv-mvg8lrzg",
+      "code": "HV003",
+      "name": "Thanh",
+      "note": "",
+      "phone": "3",
+      "classId": "cls-mvg8knjy",
+      "joinDate": "2026-10-20",
+      "chineseName": "青"
+    },
+    {
+      "id": "hv-mvg8mmpa",
+      "code": "HV004",
+      "name": "Ngọc",
+      "note": "",
+      "phone": "1",
+      "classId": "cls-mvg8mc87",
+      "joinDate": "2026-10-20",
+      "chineseName": "玉"
+    },
+    {
+      "id": "hv-mvg8mtoj",
+      "code": "HV005",
+      "name": "Phúc",
+      "note": "",
+      "phone": "2",
+      "classId": "cls-mvg8mc87",
+      "joinDate": "2026-10-20",
+      "chineseName": "福"
+    },
+    {
+      "id": "hv-mvg8myr1",
+      "code": "HV006",
+      "name": "Trâm",
+      "note": "",
+      "phone": "3",
+      "classId": "cls-mvg8mc87",
+      "joinDate": "2026-10-20",
+      "chineseName": "簪"
+    }
+  ],
+  "schedules": [
+    {
+      "id": "sch-mvg8ur83",
+      "date": "2026-10-20",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "19:00",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8mc87"
+    },
+    {
+      "id": "sch-mvgczpcs",
+      "date": "2026-10-21",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "19:00 - 20:30",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8knjy"
+    },
+    {
+      "id": "sch-mvgd00rq",
+      "date": "2026-10-23",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "19:00 - 20:30",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8mc87"
+    },
+    {
+      "id": "sch-mvhgl4hr",
+      "date": "2026-10-04",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8knjy"
+    },
+    {
+      "id": "sch-mvhgl8mv",
+      "date": "2026-10-04",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8mc87"
+    },
+    {
+      "id": "sch-mvhgld7p",
+      "date": "2026-10-05",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8mc87"
+    },
+    {
+      "id": "sch-mvhglmb7",
+      "date": "2026-10-11",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8knjy"
+    },
+    {
+      "id": "sch-mvhglpwd",
+      "date": "2026-10-11",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8mc87"
+    },
+    {
+      "id": "sch-mvhglw79",
+      "date": "2026-10-13",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8mc87"
+    },
+    {
+      "id": "sch-mvhglzsu",
+      "date": "2026-10-18",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8knjy"
+    },
+    {
+      "id": "sch-mvhgm2rb",
+      "date": "2026-10-18",
+      "link": "https://meet.google.com/weh-njvy-szt",
+      "time": "",
+      "notes": "",
+      "topic": "Buổi học Tiếng Trung",
+      "classId": "cls-mvg8mc87"
+    }
+  ],
+  "teacherSettings": {
+    "phone": "0988 123 456",
+    "bankName": "Techcombank",
+    "bankOwner": "LY QUOC",
+    "bankAccount": "1903567891011",
+    "teacherName": "Thầy Lý Quốc (李老师)",
+    "tuitionNotice": "Học phí xin vui lòng chuyển khoản trước ngày mùng 5 hàng tháng. Cú pháp: [Họ Tên] - [Tên Lớp]. Chúc các bạn học tập tốt! 加油!"
+  },
+  "cancelledClassDates": [
+    {
+      "date": "2026-10-20",
+      "classId": "cls-mvg8knjy"
+    },
+    {
+      "date": "2026-10-25",
+      "classId": "cls-mvg8mc87"
+    },
+    {
+      "date": "2026-10-23",
+      "classId": "cls-mvg8knjy"
+    },
+    {
+      "date": "2026-10-25",
+      "classId": "cls-mvg8knjy"
+    }
+  ],
+  "isAttendanceResetV2": true
+}
