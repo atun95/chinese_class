@@ -23,9 +23,6 @@
       </div>
 
       <div class="header-actions">
-        <button class="btn-cloud-sync" style="margin-right: 6px;" onclick="openBackupModal()" title="Sao lưu hoặc nạp file dữ liệu">
-          <span>📁 Sao Lưu / Nạp File</span>
-        </button>
         <button class="btn-cloud-sync" id="btn-cloud-sync" title="Đồng bộ Đám Mây (Google Firebase)" onclick="openCloudSyncModal()">
           <span class="cloud-indicator-dot" id="cloud-indicator-dot"></span>
           <span id="cloud-status-text">Đám Mây</span>
@@ -802,65 +799,28 @@
     </div>
   </div>
 
-  <!-- MODAL: KẾT NỐI VÀ ĐỒNG BỘ ĐÁM MÂY (GOOGLE FIREBASE FIRESTORE) -->
+  <!-- MODAL: TRẠNG THÁI ĐỒNG BỘ ĐÁM MÂY (GOOGLE FIREBASE FIRESTORE) -->
   <div id="modal-cloud-sync" class="modal-backdrop">
-    <div class="modal-box" style="max-width: 600px;">
+    <div class="modal-box" style="max-width: 480px;">
       <div class="modal-header">
         <div>
-          <h3>☁️ Đồng Bộ Dữ Liệu Đám Mây (Google Firebase)</h3>
-          <p class="modal-subtitle">Lưu trữ dữ liệu online lâu dài, không bao giờ bị tạm dừng/hết hạn</p>
+          <h3>☁️ Trạng Thái Đồng Bộ Đám Mây</h3>
+          <p class="modal-subtitle">Hệ thống lưu trữ tự động trên Google Firebase</p>
         </div>
         <button class="modal-close" onclick="closeModal('modal-cloud-sync')">&times;</button>
       </div>
 
-      <div style="padding: 16px 0;">
-        <div class="cloud-guide-box">
-          <strong>💡 Hướng dẫn 3 bước kết nối Google Firebase (Miễn phí vĩnh viễn):</strong><br>
-          1. Truy cập <a href="https://console.firebase.google.com" target="_blank" style="color: var(--primary); font-weight: 600;">console.firebase.google.com</a>, đăng nhập Google và bấm <strong>Tạo dự án</strong> (Create a project).<br>
-          2. Vào mục <strong>Build &rarr; Firestore Database</strong> &rarr; bấm <strong>Create database</strong> (ở tab <em>Rules</em> dán đoạn Rules bên dưới và bấm <em>Publish</em>).<br>
-          3. Vào cài đặt dự án (Project settings) hoặc bấm biểu tượng Web <strong>&lt;/&gt;</strong> để lấy đoạn mã <code>firebaseConfig</code> rồi dán vào ô bên dưới.
+      <div style="padding: 20px 0;">
+        <div id="cloud-status-detail" style="font-size: 14px; padding: 16px; border-radius: var(--radius-md); margin-bottom: 20px; background: var(--bg-subtle); line-height: 1.6; border: 1px solid var(--border-color);">
+          Trạng thái: <strong>Đang kiểm tra kết nối...</strong>
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-weight: 600; font-size: 13px;">Quy tắc bảo mật Firestore (Tab "Rules" trên Firebase Console):</label>
-          <pre class="cloud-sql-block" id="sql-copy-block" title="Nhấp vào để sao chép Rules" onclick="copySqlScript()">rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /zhongwen_app_data/{document} {
-      allow read, write: if true;
-    }
-  }
-}</pre>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="copySqlScript()" style="margin-top: 4px;">
-            📋 Sao chép Rules bảo mật
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary" onclick="manualPullFromCloud()" title="Tải dữ liệu mới nhất từ đám mây">
+            🔄 Đồng Bộ Dữ Liệu Ngay
           </button>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="cloud-firebase-config" style="font-weight: 600; font-size: 13px;">Dán đoạn mã <code>firebaseConfig</code> (hoặc mã JSON):</label>
-          <textarea id="cloud-firebase-config" class="form-control" rows="5" placeholder='const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "my-app.firebaseapp.com",
-  projectId: "my-app-12345",
-  storageBucket: "my-app.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef..."
-};' style="font-family: Consolas, Monaco, monospace; font-size: 12px;"></textarea>
-        </div>
-
-        <div id="cloud-status-detail" style="font-size: 13px; padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 14px; background: var(--bg-subtle);">
-          Trạng thái: <strong>Chưa kết nối</strong>
-        </div>
-
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" class="btn btn-primary" id="btn-save-cloud-config" onclick="saveCloudConfigAndConnect()">
-            💾 Lưu &amp; Kiểm Tra Kết Nối
-          </button>
-          <button type="button" class="btn btn-secondary" onclick="manualPushToCloud()" title="Đẩy toàn bộ dữ liệu trên máy tính này lên đám mây">
-            ⬆️ Đẩy Dữ Liệu Lên Đám Mây
-          </button>
-          <button type="button" class="btn btn-secondary" onclick="manualPullFromCloud()" title="Tải dữ liệu mới nhất từ đám mây về máy tính">
-            ⬇️ Tải Dữ Liệu Về Máy
+          <button type="button" class="btn btn-secondary" onclick="manualPushToCloud()" title="Đẩy dữ liệu hiện tại lên đám mây">
+            ⬆️ Lưu Lên Đám Mây
           </button>
         </div>
       </div>

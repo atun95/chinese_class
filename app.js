@@ -361,11 +361,7 @@ async function pullFromCloudOnStartup(hadLocalBeforeLoad) {
       await pushToCloud({ silent: true });
       return false;
     }
-    const cloudTime = row.updated_at ? new Date(row.updated_at).getTime() : 0;
-    const localTimeStr = getLocalMetaUpdatedAt();
-    const localTime = localTimeStr ? new Date(localTimeStr).getTime() : 0;
-    const useCloud = !hadLocalBeforeLoad || cloudTime > localTime;
-    if (!useCloud) return false;
+    // Tự động nạp dữ liệu từ đám mây (luôn ưu tiên dữ liệu từ đám mây khi có)
     cloudSyncPaused = true;
     applyParsedAppState(row.data);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
@@ -375,6 +371,7 @@ async function pullFromCloudOnStartup(hadLocalBeforeLoad) {
         JSON.stringify({ updatedAt: row.updated_at })
       );
     }
+    updateCloudStatusUI(null, row.updated_at);
     return true;
   } catch (err) {
     console.error("Không đồng bộ được dữ liệu lúc khởi động:", err);
@@ -400,24 +397,34 @@ function updateCloudStatusUI(errorMessage, updatedAt) {
   }
   if (detail) {
     if (errorMessage) {
-      detail.innerHTML = `Trạng thái: <strong style="color: var(--danger, #c0392b);">Lỗi — ${escapeHtml(errorMessage)}</strong>`;
+      detail.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: var(--danger, #ef4444); font-weight: 700; font-size: 15px;">
+          <span>⚠️ Chưa kết nối được</span>
+        </div>
+        <div style="color: var(--text-muted); font-size: 13px;">Chi tiết: ${escapeHtml(errorMessage)}</div>
+      `;
     } else if (connected) {
       const timeLabel = updatedAt
         ? formatDateDisplay(String(updatedAt).split("T")[0]) + " " + (String(updatedAt).split("T")[1] || "").substring(0, 8)
         : "vừa xong";
-      detail.innerHTML = `Trạng thái: <strong style="color: var(--success, #27ae60);">Đã kết nối Google Firebase (Không hết hạn)</strong><br>Cập nhật gần nhất: ${escapeHtml(timeLabel)}`;
+      detail.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: var(--success, #10b981); font-weight: 700; font-size: 15px;">
+          <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);"></span>
+          <span>Đã kết nối Google Firebase</span>
+        </div>
+        <div style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Dữ liệu tự động lưu và đồng bộ 24/7.<br>Cập nhật gần nhất: <strong>${escapeHtml(timeLabel)}</strong></div>
+      `;
     } else {
-      detail.innerHTML = "Trạng thái: <strong>Chưa kết nối Firebase</strong>";
+      detail.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-weight: 600;">
+          <span>⏳ Đang kiểm tra kết nối tới Google Firebase...</span>
+        </div>
+      `;
     }
   }
 }
 
 function openCloudSyncModal() {
-  const cfg = getEffectiveFirebaseConfig();
-  const input = document.getElementById("cloud-firebase-config");
-  if (input && cfg && cfg.apiKey) {
-    input.value = JSON.stringify(cfg, null, 2);
-  }
   updateCloudStatusUI();
   openModal("modal-cloud-sync");
 }
