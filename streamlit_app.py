@@ -43,6 +43,7 @@ st.markdown("""
         border: none !important;
         width: 100% !important;
         overflow: hidden !important;
+        min-height: 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -172,5 +173,5 @@ with st.sidebar:
     st.markdown("2. Người khác mở link Streamlit này sẽ thấy dữ liệu mới nhất.")
     st.markdown("3. Bấm biểu tượng ☁️ trên thanh menu để kiểm tra hoặc đổi cấu hình.")
 
-# Khung tự giãn theo nội dung — chỉ còn 1 thanh cuộn ngoài (sidebar Streamlit)
-components.html(html_bundle, height=900, scrolling=False)
+# Chiều cao ban đầu thấp; JS sẽ giãn đúng bằng nội dung để không dư trắng
+components.html(html_bundle, height=200, scrolling=False)

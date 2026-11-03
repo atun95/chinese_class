@@ -2801,23 +2801,38 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
-// Khi nhúng trong Streamlit: giãn iframe theo nội dung để chỉ còn 1 thanh cuộn ngoài
+// Khi nhúng trong Streamlit: giãn iframe đúng bằng nội dung thật (không lấy chiều cao viewport)
+function measurePageContentHeight() {
+  if (!document.body) return 0;
+  let bottom = 0;
+  Array.from(document.body.children).forEach(el => {
+    if (!el || el.id === "toast") return;
+    if (el.classList && el.classList.contains("modal-backdrop")) return;
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.position === "fixed") return;
+    const rect = el.getBoundingClientRect();
+    const marginBottom = parseFloat(style.marginBottom) || 0;
+    bottom = Math.max(bottom, rect.bottom + window.scrollY + marginBottom);
+  });
+  return Math.ceil(bottom);
+}
+
 function syncHostFrameHeight() {
   const apply = () => {
-    const height = Math.max(
-      document.documentElement.scrollHeight,
-      document.body ? document.body.scrollHeight : 0,
-      document.documentElement.offsetHeight
-    ) + 12;
-    try {
-      const frame = window.frameElement;
-      if (frame) {
-        frame.style.height = height + "px";
-        frame.style.minHeight = "0";
-        frame.style.overflow = "hidden";
-        frame.setAttribute("height", String(height));
-      }
-    } catch (e) { /* mở file HTML độc lập thì bỏ qua */ }
+    let frame = null;
+    try { frame = window.frameElement; } catch (e) { frame = null; }
+    if (!frame) return;
+
+    document.documentElement.classList.add("embedded-host");
+    const height = Math.max(measurePageContentHeight() + 4, 1);
+    if (Math.abs(height - (window.__zhongwenLastFrameHeight || 0)) < 2) return;
+    window.__zhongwenLastFrameHeight = height;
+
+    frame.style.height = height + "px";
+    frame.style.minHeight = "0";
+    frame.style.maxHeight = "none";
+    frame.style.overflow = "hidden";
+    frame.setAttribute("height", String(height));
     try {
       window.parent.postMessage({
         isStreamlitMessage: true,
@@ -2828,23 +2843,28 @@ function syncHostFrameHeight() {
   };
   apply();
   requestAnimationFrame(apply);
-  setTimeout(apply, 80);
-  setTimeout(apply, 320);
 }
 
 function startHostFrameHeightSync() {
   if (window.__zhongwenFrameHeightSync) return;
   window.__zhongwenFrameHeightSync = true;
+  let frame = null;
+  try { frame = window.frameElement; } catch (e) { frame = null; }
+  if (!frame) return;
+
+  document.documentElement.classList.add("embedded-host");
   syncHostFrameHeight();
   window.addEventListener("resize", syncHostFrameHeight);
   if (typeof ResizeObserver !== "undefined") {
     let timer = null;
     const observer = new ResizeObserver(() => {
       clearTimeout(timer);
-      timer = setTimeout(syncHostFrameHeight, 40);
+      timer = setTimeout(syncHostFrameHeight, 50);
     });
-    observer.observe(document.documentElement);
-    if (document.body) observer.observe(document.body);
+    const header = document.querySelector(".app-header");
+    const main = document.querySelector(".main-content");
+    if (header) observer.observe(header);
+    if (main) observer.observe(main);
   }
 }
 
