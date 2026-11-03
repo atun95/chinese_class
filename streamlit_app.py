@@ -19,7 +19,7 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
+
     /* Mở rộng tối đa chiều ngang và bỏ padding */
     .block-container {
         padding-top: 0rem !important;
@@ -28,12 +28,21 @@ st.markdown("""
         padding-right: 0rem !important;
         max-width: 100% !important;
     }
-    
-    /* Khung iframe ứng dụng */
+
+    /* Chỉ dùng 1 thanh cuộn ngoài của Streamlit, không cuộn kép trong iframe */
+    .stApp {
+        overflow-x: hidden !important;
+    }
+    div[data-testid="stVerticalBlock"],
+    div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stHtml"] {
+        overflow: visible !important;
+        height: auto !important;
+    }
     iframe {
         border: none !important;
         width: 100% !important;
-        min-height: 100vh !important;
+        overflow: hidden !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -163,5 +172,5 @@ with st.sidebar:
     st.markdown("2. Người khác mở link Streamlit này sẽ thấy dữ liệu mới nhất.")
     st.markdown("3. Bấm biểu tượng ☁️ trên thanh menu để kiểm tra hoặc đổi cấu hình.")
 
-# Hiển thị app với kích thước 100%
-components.html(html_bundle, height=1150, scrolling=True)
+# Khung tự giãn theo nội dung — chỉ còn 1 thanh cuộn ngoài (sidebar Streamlit)
+components.html(html_bundle, height=900, scrolling=False)

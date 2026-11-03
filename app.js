@@ -45,6 +45,7 @@ function initApp() {
   renderTuitionManagement();
   renderWeeklySchedule();
   renderQuickSampleStudents();
+  syncHostFrameHeight();
 }
 
 function syncSchedulesToSessions() {
@@ -527,6 +528,7 @@ function switchTeacherTab(tabId) {
   if (tabId === "tab-attendance") renderAttendanceHistory();
   if (tabId === "tab-tuition") renderTuitionManagement();
   if (tabId === "tab-schedule") renderWeeklySchedule();
+  syncHostFrameHeight();
 }
 
 // ============================================================================
@@ -2799,6 +2801,53 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
+// Khi nhúng trong Streamlit: giãn iframe theo nội dung để chỉ còn 1 thanh cuộn ngoài
+function syncHostFrameHeight() {
+  const apply = () => {
+    const height = Math.max(
+      document.documentElement.scrollHeight,
+      document.body ? document.body.scrollHeight : 0,
+      document.documentElement.offsetHeight
+    ) + 12;
+    try {
+      const frame = window.frameElement;
+      if (frame) {
+        frame.style.height = height + "px";
+        frame.style.minHeight = "0";
+        frame.style.overflow = "hidden";
+        frame.setAttribute("height", String(height));
+      }
+    } catch (e) { /* mở file HTML độc lập thì bỏ qua */ }
+    try {
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: "streamlit:setFrameHeight",
+        height
+      }, "*");
+    } catch (e) { /* ignore */ }
+  };
+  apply();
+  requestAnimationFrame(apply);
+  setTimeout(apply, 80);
+  setTimeout(apply, 320);
+}
+
+function startHostFrameHeightSync() {
+  if (window.__zhongwenFrameHeightSync) return;
+  window.__zhongwenFrameHeightSync = true;
+  syncHostFrameHeight();
+  window.addEventListener("resize", syncHostFrameHeight);
+  if (typeof ResizeObserver !== "undefined") {
+    let timer = null;
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(syncHostFrameHeight, 40);
+    });
+    observer.observe(document.documentElement);
+    if (document.body) observer.observe(document.body);
+  }
+}
+
 // Lắng nghe click đóng modal khi click ra ngoài backdrop
 window.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal-backdrop")) {
@@ -2808,8 +2857,11 @@ window.addEventListener("click", (e) => {
 
 // Khởi chạy ứng dụng khi DOM tải xong
 document.addEventListener("DOMContentLoaded", () => {
+  startHostFrameHeightSync();
   bootstrapApp().catch(err => {
     console.error("Lỗi khởi động ứng dụng:", err);
     initApp();
+  }).finally(() => {
+    syncHostFrameHeight();
   });
 });
