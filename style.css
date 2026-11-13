@@ -1348,6 +1348,12 @@ select:focus, input:focus, textarea:focus {
   display: flex;
 }
 
+/* Trong Streamlit, iframe cao bằng cả trang: căn popup theo màn hình đang nhìn, không theo giữa trang */
+html.embedded-host .modal-backdrop.open {
+  align-items: flex-start;
+  justify-content: center;
+}
+
 .modal-box {
   background: var(--bg-card);
   border-radius: var(--radius-lg);

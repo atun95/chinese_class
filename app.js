@@ -2730,14 +2730,65 @@ function populateClassDropdowns() {
   }
 }
 
+function centerModalInView(modal) {
+  if (!modal) return;
+  const box = modal.querySelector(".modal-box");
+  if (!box) return;
+
+  let frame = null;
+  let parentWin = null;
+  try {
+    frame = window.frameElement;
+    parentWin = window.parent;
+  } catch (e) {
+    frame = null;
+    parentWin = null;
+  }
+
+  if (!frame || !parentWin || parentWin === window) {
+    box.style.marginTop = "";
+    box.style.marginBottom = "";
+    box.style.maxHeight = "";
+    return;
+  }
+
+  document.documentElement.classList.add("embedded-host");
+
+  const frameTop = frame.getBoundingClientRect().top;
+  const viewH = parentWin.innerHeight || window.innerHeight;
+  const visibleTop = Math.max(0, -frameTop);
+  box.style.maxHeight = Math.max(220, viewH - 48) + "px";
+
+  const boxHeight = box.offsetHeight || 0;
+  const minTop = visibleTop + 16;
+  const maxTop = Math.max(minTop, visibleTop + viewH - boxHeight - 16);
+  let top = (viewH / 2) - frameTop - boxHeight / 2;
+  top = Math.min(Math.max(top, minTop), maxTop);
+
+  box.style.marginTop = Math.round(top) + "px";
+  box.style.marginBottom = "24px";
+}
+
+function recenterOpenModals() {
+  document.querySelectorAll(".modal-backdrop.open").forEach(centerModalInView);
+}
+
 function openModal(id) {
   const modal = document.getElementById(id);
-  if (modal) modal.classList.add("open");
+  if (!modal) return;
+  modal.classList.add("open");
+  requestAnimationFrame(() => centerModalInView(modal));
 }
 
 function closeModal(id) {
   const modal = document.getElementById(id);
-  if (modal) modal.classList.remove("open");
+  if (!modal) return;
+  modal.classList.remove("open");
+  const box = modal.querySelector(".modal-box");
+  if (!box) return;
+  box.style.marginTop = "";
+  box.style.marginBottom = "";
+  box.style.maxHeight = "";
 }
 
 function showToast(message) {
@@ -2840,9 +2891,13 @@ function syncHostFrameHeight() {
         height
       }, "*");
     } catch (e) { /* ignore */ }
+    recenterOpenModals();
   };
   apply();
-  requestAnimationFrame(apply);
+  requestAnimationFrame(() => {
+    apply();
+    recenterOpenModals();
+  });
 }
 
 function startHostFrameHeightSync() {
@@ -2855,6 +2910,15 @@ function startHostFrameHeightSync() {
   document.documentElement.classList.add("embedded-host");
   syncHostFrameHeight();
   window.addEventListener("resize", syncHostFrameHeight);
+  try {
+    const parentWin = window.parent;
+    if (parentWin && parentWin !== window) {
+      parentWin.addEventListener("resize", recenterOpenModals);
+      if (parentWin.document) {
+        parentWin.document.addEventListener("scroll", recenterOpenModals, true);
+      }
+    }
+  } catch (e) { /* iframe khác nguồn: giữ căn giữa theo CSS */ }
   if (typeof ResizeObserver !== "undefined") {
     let timer = null;
     const observer = new ResizeObserver(() => {
@@ -2871,7 +2935,7 @@ function startHostFrameHeightSync() {
 // Lắng nghe click đóng modal khi click ra ngoài backdrop
 window.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal-backdrop")) {
-    e.target.classList.remove("open");
+    closeModal(e.target.id);
   }
 });
 
